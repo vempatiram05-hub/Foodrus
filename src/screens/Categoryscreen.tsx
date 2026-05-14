@@ -1,0 +1,97 @@
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
+  FlatList,
+  Dimensions,
+} from 'react-native';
+
+const ORANGE = '#F97316';
+const { width } = Dimensions.get('window');
+const CARD_SIZE = (width - 48) / 2;
+
+const CATEGORIES = [
+  { id: 1, label: 'Fruits & Vegetables', emoji: '🥦🍊🍇' },
+  { id: 2, label: 'Breakfast', emoji: '🥣☕🍞' },
+  { id: 3, label: 'Beverages', emoji: '🥤🍹🧃' },
+  { id: 4, label: 'Meat & Fish', emoji: '🥩🐟🍗' },
+  { id: 5, label: 'Snacks', emoji: '🍿🍪🥨' },
+  { id: 6, label: 'Dairy', emoji: '🥛🧀🥚' },
+  { id: 7, label: 'Bakery', emoji: '🍞🥐🎂' },
+  { id: 8, label: 'Organic', emoji: '🌿🥬🌱' },
+];
+
+const CategoryCard = ({ item }) => (
+  <TouchableOpacity style={styles.card}>
+    <View style={styles.cardImageArea}>
+      <Text style={styles.cardEmoji}>{item.emoji}</Text>
+    </View>
+    <Text style={styles.cardLabel}>{item.label}</Text>
+  </TouchableOpacity>
+);
+
+export default function CategoryScreen() {
+  return (
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.headerRow}>
+        <Text style={styles.pageTitle}>Category</Text>
+      </View>
+
+      <FlatList
+        data={CATEGORIES}
+        keyExtractor={(item) => String(item.id)}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item }) => <CategoryCard item={item} />}
+      />
+
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: '#fff' },
+
+  headerRow: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
+  pageTitle: { fontSize: 22, fontWeight: '700', color: '#111' },
+
+  listContent: { paddingHorizontal: 16, paddingBottom: 20 },
+  row: { justifyContent: 'space-between', marginBottom: 16 },
+
+  card: {
+    width: CARD_SIZE,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 3,
+    overflow: 'hidden',
+    alignItems: 'center',
+  },
+  cardImageArea: {
+    width: '100%',
+    height: CARD_SIZE * 0.75,
+    backgroundColor: '#fafafa',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardEmoji: { fontSize: 48 },
+  cardLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    textAlign: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+  },
+
+
+});
