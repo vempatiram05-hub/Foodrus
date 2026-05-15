@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 
+
 import {
   View,
   Text,
@@ -15,12 +16,12 @@ import {
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
-  { id: '1', name: 'Cake', emoji: '🎂' },
-  { id: '2', name: "Biryani's", emoji: '🍛' },
-  { id: '3', name: 'Omelette', emoji: '🍳' },
-  { id: '4', name: 'Shakes', emoji: '🥤' },
-  { id: '5', name: 'Chinese', emoji: '🥡' },
-  { id: '6', name: 'Burger', emoji: '🍔' },
+  { id: '1', name: 'Cake', image: require('../assets/images/logo/cake.png') },
+  { id: '2', name: "Biryani's", image: require('../assets/images/logo/biryani.png') },
+  { id: '3', name: 'Omelette', image: require('../assets/images/logo/omlette.png') },
+  { id: '4', name: 'Shakes', image: require('../assets/images/logo/shakes.png') },
+  { id: '5', name: 'Chinese', image: require('../assets/images/logo/chinese.png') },
+  { id: '6', name: 'Burger', image: require('../assets/images/logo/burger.png') },
 ];
 
 const RESTAURANTS = [
@@ -45,12 +46,12 @@ const RESTAURANTS = [
 ];
 
 const CUISINES = [
-  { id: '1', name: 'Snacks', emoji: '🥐' },
-  { id: '2', name: 'Desserts', emoji: '🍰' },
-  { id: '3', name: 'Indiansweet', emoji: '🍮' },
-  { id: '4', name: 'Beverages', emoji: '🧃' },
-  { id: '5', name: 'Donuts', emoji: '🍩' },
-  { id: '6', name: 'Rice', emoji: '🍚' },
+  { id: '1', name: 'Snacks', image: require('../assets/images/logo/snacks.png') },
+  { id: '2', name: 'Desserts', image: require('../assets/images/logo/desserts.png') },
+  { id: '3', name: 'Indiansweet', image: require('../assets/images/logo/indiansweet.png') },
+  { id: '4', name: 'Beverages', image: require('../assets/images/logo/beverages.png') },
+  { id: '5', name: 'Donuts', image: require('../assets/images/logo/donuts.png') },
+  { id: '6', name: 'Rice', image: require('../assets/images/logo/rice.png') },
 ];
 
 const GROCERIES = [
@@ -114,6 +115,7 @@ const HomeScreen: React.FC = () => {
   const navigation = useNavigation(); // ← add this line
 
 
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
@@ -152,9 +154,9 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.searchInput}>Search for 'pizza' or 'milk'...</Text>
         </TouchableOpacity>
 
-        {/* ── Hero Banner ── */}
+        {/* ── Hero Banner with Tags ── */}
         <View style={styles.heroBanner}>
-          <View style={styles.heroLeft}>
+          <View style={styles.heroLeftContent}>
             <Text style={styles.heroTitle}>Groceries & Food</Text>
             <Text style={styles.heroSubtitle}>delivery in 10 mins</Text>
             <Text style={styles.heroDesc}>
@@ -164,20 +166,15 @@ const HomeScreen: React.FC = () => {
               <Text style={styles.heroBtnText}>Order Groceries</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.heroRight}>
-            <View style={styles.heroBadge}>
-              <Text style={styles.heroBadgeStar}>⭐ 4.5</Text>
-              <Text style={styles.heroBadgeLabel}>Top Rated</Text>
-            </View>
-            <View style={styles.heroImageBox}>
-              <Text style={styles.heroEmoji}>🍔</Text>
-              <Text style={styles.heroEmoji2}>🥗</Text>
-            </View>
-          </View>
+          <Image
+            source={require('../assets/images/logo/Bnner.png')}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
         </View>
 
-        {/* ── Hero Tags ── */}
-        <View style={styles.heroTags}>
+        {/* ── Hero Tags Below Banner ── */}
+        <View style={styles.heroTagsWrapper}>
           <Text style={styles.heroTag}>🌿 Fresh products</Text>
           <Text style={styles.heroTag}>👌 Best quality</Text>
           <Text style={styles.heroTag}>⏱ 10 min delivery</Text>
@@ -195,7 +192,11 @@ const HomeScreen: React.FC = () => {
           {CATEGORIES.map((cat) => (
             <TouchableOpacity key={cat.id} style={styles.categoryItem}>
               <View style={styles.categoryCircle}>
-                <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
+                <Image
+                  source={cat.image}
+                  style={styles.categoryImage}
+                  resizeMode="cover"
+                />
               </View>
               <Text style={styles.categoryName}>{cat.name}</Text>
             </TouchableOpacity>
@@ -220,9 +221,7 @@ const HomeScreen: React.FC = () => {
           {/* Banner 2 – blue */}
           <View style={[styles.promoBanner, { backgroundColor: '#005fa3' }]}>
             <Text style={styles.promoTagBlue}>SWIFT PASS</Text>
-            <View style={styles.freeDeliveryBadge}>
-              <Text style={styles.freeDeliveryTxt}>Free & Free{'\n'}DELIVERY</Text>
-            </View>
+
             <Text style={styles.promoSubBlue}>Free Delivery</Text>
             <TouchableOpacity style={styles.promoBtnWhite}>
               <Text style={styles.promoBtnWhiteTxt}>Subscribe</Text>
@@ -242,7 +241,11 @@ const HomeScreen: React.FC = () => {
         {/* ── Popular Restaurants ── */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Popular Restaurants</Text>
-          <TouchableOpacity style={styles.viewAllBtn}>
+
+          <TouchableOpacity
+            style={styles.viewAllBtn}
+            onPress={() => navigation.navigate('PopularRestaurant' as never)}
+          >
             <Text style={styles.viewAllText}>View all</Text>
           </TouchableOpacity>
         </View>
@@ -271,15 +274,12 @@ const HomeScreen: React.FC = () => {
 
         {/* ── Variety of Cuisines ── */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Popular Restaurants</Text>
+          <Text style={styles.sectionTitle}>Variety of Cuisines</Text>
 
           <TouchableOpacity
             style={styles.viewAllBtn}
-            onPress={() =>
-              navigation.navigate('FoodTabs' as never, {
-                screen: 'PopularRestaurantScreen' as never,
-              } as never)
-            }          >
+            onPress={() => navigation.navigate('PopularRestaurant' as never)}
+          >
             <Text style={styles.viewAllText}>View all</Text>
           </TouchableOpacity>
         </View>
@@ -291,7 +291,11 @@ const HomeScreen: React.FC = () => {
           {CUISINES.map((c) => (
             <TouchableOpacity key={c.id} style={styles.cuisineItem}>
               <View style={styles.cuisineCircle}>
-                <Text style={styles.cuisineEmoji}>{c.emoji}</Text>
+                <Image
+                  source={c.image}
+                  style={styles.cuisineImage}
+                  resizeMode="cover"
+                />
               </View>
               <Text style={styles.cuisineName}>{c.name}</Text>
             </TouchableOpacity>
@@ -374,24 +378,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#fff8f0',
     marginHorizontal: 16,
+    marginBottom: 0,
     borderRadius: 16,
-    padding: 16,
+    padding: 5,
     overflow: 'hidden',
+    alignItems: 'center',
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
   },
-  heroLeft: { flex: 1, justifyContent: 'center' },
-  heroTitle: { fontSize: 16, fontWeight: '800', color: '#222' },
+
+  heroLeftContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+
+  heroTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#222',
+  },
+
   heroSubtitle: {
-    fontSize: 18,
-    fontWeight: '900',
+    fontSize: 14,
+    fontWeight: '800',
     color: '#FF6B35',
     marginBottom: 6,
   },
+
   heroDesc: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#666',
-    marginBottom: 12,
-    lineHeight: 17,
+    marginBottom: 8,
   },
+
   heroBtn: {
     borderWidth: 1.5,
     borderColor: '#FF6B35',
@@ -399,43 +418,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     alignSelf: 'flex-start',
+    backgroundColor: '#ffffff',
   },
-  heroBtnText: { fontSize: 13, color: '#FF6B35', fontWeight: '600' },
-  heroRight: { width: 120, alignItems: 'center', justifyContent: 'center' },
-  heroBadge: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    alignSelf: 'flex-end',
-    marginBottom: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  heroBadgeStar: { fontSize: 11, fontWeight: '700', color: '#FF6B35' },
-  heroBadgeLabel: { fontSize: 9, color: '#888' },
-  heroImageBox: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 60,
-    width: 90,
-    height: 90,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroEmoji: { fontSize: 30 },
-  heroEmoji2: { fontSize: 22, position: 'absolute', bottom: 5, right: 5 },
 
-  // Hero Tags
-  heroTags: {
+  heroBtnText: {
+    fontSize: 10,
+    color: '#FF6B35',
+    fontWeight: '700'
+  },
+
+  heroImage: {
+    width: 180,
+    height: 120,
+    borderRadius: 12,
+    flexShrink: 0,
+  },
+
+  heroTagsWrapper: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 4,
+    paddingVertical: 8,
     gap: 10,
+    backgroundColor: '#fff8f0',
+    marginHorizontal: 16,
+    marginTop: -2,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    paddingBottom: 12,
   },
-  heroTag: { fontSize: 11, color: '#555' },
+
+  heroTag: {
+    fontSize: 11,
+    color: '#666',
+    fontWeight: '500',
+  },
 
   // Section Headers
   sectionHeader: { paddingHorizontal: 16, marginTop: 18, marginBottom: 15 },
@@ -472,30 +488,34 @@ const styles = StyleSheet.create({
   categoryCircle: {
     width: 60,
     height: 60,
-    borderRadius: 30,
+    borderRadius: 10,
     backgroundColor: '#f5f5f5',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
   },
-  categoryEmoji: { fontSize: 28 },
   categoryName: { fontSize: 12, color: '#333', textAlign: 'center', marginBottom: 8 },
+  categoryImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+  },
 
   // Promo Banners
   promoScroll: { paddingLeft: 16, marginBottom: 4 },
   promoBanner: {
-    width: 140,
+    width: 200,
     borderRadius: 14,
-    padding: 12,
+    padding: 8,
     marginRight: 10,
-    minHeight: 120,
+    height: 100,
     justifyContent: 'space-between',
   },
   promoTag1: {
     fontSize: 15,
     fontWeight: '900',
     color: '#FF6B35',
-    lineHeight: 18,
+
   },
   promoSub1: { fontSize: 10, color: '#ccc', flex: 1 },
   promoBtn1: {
@@ -509,19 +529,7 @@ const styles = StyleSheet.create({
   promoBtnTxt1: { color: '#fff', fontSize: 12, fontWeight: '700' },
 
   promoTagBlue: { fontSize: 13, fontWeight: '900', color: '#fff' },
-  freeDeliveryBadge: {
-    backgroundColor: '#f0c040',
-    borderRadius: 6,
-    padding: 4,
-    alignSelf: 'flex-start',
-    marginVertical: 4,
-  },
-  freeDeliveryTxt: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#333',
-    lineHeight: 12,
-  },
+
   promoSubBlue: { fontSize: 9, color: '#cce4ff', lineHeight: 13 },
 
   promoTagGreen: { fontSize: 11, fontWeight: '900', color: '#fff' },
@@ -581,6 +589,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 6,
   },
+  cuisineImage: {
+  width: 64,
+  height: 64,
+  borderRadius: 32,
+},
   cuisineEmoji: { fontSize: 30 },
   cuisineName: { fontSize: 11, color: '#333', textAlign: 'center' },
 
