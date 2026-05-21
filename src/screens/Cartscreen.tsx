@@ -12,10 +12,10 @@ import {
 const ORANGE = '#F97316';
 
 const initialItems = [
-  { id: 1, name: 'Fresh Oranges', weight: '500 g', discount: '10 %off', price: 1000, qty: 4 },
-  { id: 2, name: 'Fresh Oranges', weight: '500 g', discount: '10 %off', price: 1000, qty: 4 },
-  { id: 3, name: 'Fresh Oranges', weight: '500 g', discount: '10 %off', price: 1000, qty: 4 },
-  { id: 4, name: 'Fresh Oranges', weight: '500 g', discount: '10 %off', price: 1000, qty: 4 },
+  { id: 1, name: 'Fresh Oranges', weight: '500 g', discount: '10 %off', price: 1000, qty: 4, image: require('../assets/images/logo/logo.png') },
+  { id: 2, name: 'Fresh Oranges', weight: '500 g', discount: '10 %off', price: 1000, qty: 4, image: require('../assets/images/logo/logo.png') },
+  { id: 3, name: 'Fresh Oranges', weight: '500 g', discount: '10 %off', price: 1000, qty: 4, image: require('../assets/images/logo/logo.png') },
+  { id: 4, name: 'Fresh Oranges', weight: '500 g', discount: '10 %off', price: 1000, qty: 4, image: require('../assets/images/logo/logo.png') },
 ];
 
 export default function CartScreen() {
@@ -58,7 +58,7 @@ export default function CartScreen() {
 
       {/* Savings banner */}
       <View style={styles.savingsBanner}>
-        <Text style={styles.savingsText}>You saved $50 on this order</Text>
+        <Text style={styles.savingsText}>You saved ₹50 on this order</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll}>
@@ -66,9 +66,8 @@ export default function CartScreen() {
         {items.map((item) => (
           <View key={item.id} style={styles.cartItem}>
             {/* Product image placeholder */}
-            <View style={styles.productImage}>
-              <Text style={{ fontSize: 28 }}>🍊</Text>
-            </View>
+            <Image source={item.image} style={styles.productImage} resizeMode="cover" />
+
 
             <View style={styles.itemInfo}>
               <Text style={styles.itemName}>{item.name}</Text>
@@ -169,10 +168,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
     gap: 8,
   },
-  productImage: {
-    width: 60, height: 60, backgroundColor: '#f9fafb',
-    borderRadius: 8, justifyContent: 'center', alignItems: 'center',
-  },
+ productImage: {
+  width: 60,
+  height: 60,
+  borderRadius: 8,
+},
   itemInfo: { flex: 1 },
   itemName: { fontSize: 13, fontWeight: '600', color: '#111' },
   itemWeight: { fontSize: 11, color: '#9ca3af', marginTop: 1 },

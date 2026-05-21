@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigation } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -9,8 +10,8 @@ import {
   SafeAreaView,
 } from 'react-native';
 
-const MenuRow = ({ icon, label }) => (
-  <TouchableOpacity style={styles.menuRow}>
+const MenuRow = ({ icon, label, onPress }) => (
+  <TouchableOpacity style={styles.menuRow} onPress={onPress}>
     <Text style={styles.menuIcon}>{icon}</Text>
     <Text style={styles.menuLabel}>{label}</Text>
     <Text style={styles.chevron}>›</Text>
@@ -22,6 +23,8 @@ const SectionTitle = ({ title }) => (
 );
 
 export default function ProfileScreen() {
+  const navigation = useNavigation();
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -66,8 +69,11 @@ export default function ProfileScreen() {
         {/* Support Section */}
         <SectionTitle title="Support" />
         <MenuRow icon="❓" label="Help" />
-        <MenuRow icon="ℹ️" label="About" />
-
+        <MenuRow
+          icon="ℹ️"
+          label="About"
+          onPress={() => navigation.navigate('About' as never)}
+        />
         {/* Log Out */}
         <TouchableOpacity style={styles.logoutButton}>
           <Text style={styles.logoutIcon}>↪</Text>

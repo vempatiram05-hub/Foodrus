@@ -16,12 +16,24 @@ import {
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
-  { id: '1', name: 'Cake', image: require('../assets/images/logo/cake.png') },
-  { id: '2', name: "Biryani's", image: require('../assets/images/logo/biryani.png') },
-  { id: '3', name: 'Omelette', image: require('../assets/images/logo/omlette.png') },
-  { id: '4', name: 'Shakes', image: require('../assets/images/logo/shakes.png') },
-  { id: '5', name: 'Chinese', image: require('../assets/images/logo/chinese.png') },
-  { id: '6', name: 'Burger', image: require('../assets/images/logo/burger.png') },
+  {
+    id: '1', name: 'Cake', image: require('../assets/images/logo/cake.png'), screen: 'Cake',
+  },
+  {
+    id: '2', name: "Biryani's", image: require('../assets/images/logo/biryani.png'), screen: 'Biryani',
+  },
+  {
+    id: '3', name: 'Omelette', image: require('../assets/images/logo/omlette.png'), screen: 'Omelette',
+  },
+  {
+    id: '4', name: 'Shakes', image: require('../assets/images/logo/shakes.png'), screen: 'Shakes',
+  },
+  {
+    id: '5', name: 'Chinese', image: require('../assets/images/logo/chinese.png'), screen: 'Chinese',
+  },
+  {
+    id: '6', name: 'Burger', image: require('../assets/images/logo/burger.png'), screen: 'Burger',
+  },
 ];
 
 const RESTAURANTS = [
@@ -32,7 +44,7 @@ const RESTAURANTS = [
     rating: '4.5',
     discount: '10% OFF Upto ₹140',
     color: '#8B2500',
-    emoji: '🍛',
+    image: require('../assets/images/logo/biryani.png'),
   },
   {
     id: '2',
@@ -41,67 +53,68 @@ const RESTAURANTS = [
     rating: '4.5',
     discount: '10% OFF Upto ₹100',
     color: '#C67D2E',
-    emoji: '🍛',
+    image: require('../assets/images/logo/biryani.png'),
   },
 ];
 
 const CUISINES = [
-  { id: '1', name: 'Snacks', image: require('../assets/images/logo/snacks.png') },
+  { id: '1', name: 'Snacks', image: require('../assets/images/logo/snacks.png'), },
   { id: '2', name: 'Desserts', image: require('../assets/images/logo/desserts.png') },
   { id: '3', name: 'Indiansweet', image: require('../assets/images/logo/indiansweet.png') },
   { id: '4', name: 'Beverages', image: require('../assets/images/logo/beverages.png') },
   { id: '5', name: 'Donuts', image: require('../assets/images/logo/donuts.png') },
   { id: '6', name: 'Rice', image: require('../assets/images/logo/rice.png') },
 ];
+type Grocery = {
+  id: string;
+  weight: string;
+  name: string;
+  price: string;
+  image: any;
+};
 
-const GROCERIES = [
+const GROCERIES: Grocery[] = [
   {
     id: '1',
     weight: '150 g',
     name: "Lay's Classic Potato Chips",
-    price: '$3.49',
-    color: '#e8d5b0',
-    emoji: '🥔',
+    price: '349 Only',
+    image: require('../assets/images/logo/snacks.png'),
   },
   {
     id: '2',
     weight: '1 L',
     name: 'Organic whole milk',
-    price: '$3.49',
-    color: '#f0f0f0',
-    emoji: '🥛',
+    price: '249 Only',
+    image: require('../assets/images/logo/beverages.png'),
   },
   {
     id: '3',
     weight: '150 g',
     name: "Lay's Classic Potato Chips",
-    price: '$3.49',
-    color: '#d4a85a',
-    emoji: '🥔',
+    price: '349 Only',
+    image: require('../assets/images/logo/snacks.png'),
   },
   {
     id: '4',
     weight: '150 g',
     name: "Lay's Classic Potato Chips",
-    price: '$3.49',
-    color: '#b5651d',
-    emoji: '🥔',
+    price: '349 Only',
+    image: require('../assets/images/logo/snacks.png'),
   },
   {
     id: '5',
     weight: '150 g',
     name: "Lay's Classic Potato Chips",
-    price: '$3.49',
-    color: '#6aaa5e',
-    emoji: '🥔',
+    price: '349 Only',
+    image: require('../assets/images/logo/snacks.png'),
   },
   {
     id: '6',
     weight: '150 g',
     name: "Lay's Classic Potato Chips",
-    price: '$3.49',
-    color: '#e8d5b0',
-    emoji: '🥔',
+    price: '349 Only',
+    image: require('../assets/images/logo/snacks.png'),
   },
 ];
 
@@ -184,13 +197,20 @@ const HomeScreen: React.FC = () => {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Explore Categories</Text>
         </View>
+
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.categoryScroll}
         >
           {CATEGORIES.map((cat) => (
-            <TouchableOpacity key={cat.id} style={styles.categoryItem}>
+            <TouchableOpacity
+              key={cat.id}
+              style={styles.categoryItem}
+              onPress={() =>
+                navigation.navigate(cat.screen as never)
+              }
+            >
               <View style={styles.categoryCircle}>
                 <Image
                   source={cat.image}
@@ -198,11 +218,11 @@ const HomeScreen: React.FC = () => {
                   resizeMode="cover"
                 />
               </View>
+
               <Text style={styles.categoryName}>{cat.name}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
-
         {/* ── Promo Banners ── */}
         <ScrollView
           horizontal
@@ -210,32 +230,78 @@ const HomeScreen: React.FC = () => {
           style={styles.promoScroll}
         >
           {/* Banner 1 – dark */}
-          <View style={[styles.promoBanner, { backgroundColor: '#1a1a2e' }]}>
+          <View style={styles.promoBannerContainers}>
+            {/* Left Content */}
+            <View style={styles.promoBannerLeft}>
+              <Text style={styles.promoTag}>TIME OFF</Text>
+              <Text style={styles.promoTitle}>Subscribe</Text>
+              <Text style={styles.promoDesc}>Now</Text>
+              <TouchableOpacity style={styles.promoBtn}>
+                <Text style={styles.promoBtnText}>Subscribe</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Right Image */}
+            <Image
+              source={require('../assets/images/logo/logo.png')}
+              style={styles.promoImage}
+              resizeMode="cover"
+            />
+          </View>
+          {/* <View style={[styles.promoBanner, { backgroundColor: '#1a1a2e' }]}>
             <Text style={styles.promoTag1}>TIME{'\n'}OFF</Text>
             <Text style={styles.promoSub1}>Subscribe</Text>
             <TouchableOpacity style={styles.promoBtn1}>
               <Text style={styles.promoBtnTxt1}>Now</Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
 
           {/* Banner 2 – blue */}
-          <View style={[styles.promoBanner, { backgroundColor: '#005fa3' }]}>
-            <Text style={styles.promoTagBlue}>SWIFT PASS</Text>
+          <View style={styles.promoBannerContainer}>
+            {/* Left Content */}
+            <View style={styles.promoBannerLeft}>
+              <Text style={styles.promoTag}>SWIFT PASS</Text>
+              <Text style={styles.promoTitle}>Free Delivery</Text>
+              <Text style={styles.promoDesc}>Unlimited free delivery for 1 month</Text>
+              <TouchableOpacity style={styles.promoBtn}>
+                <Text style={styles.promoBtnText}>Subscribe</Text>
+              </TouchableOpacity>
+            </View>
 
-            <Text style={styles.promoSubBlue}>Free Delivery</Text>
-            <TouchableOpacity style={styles.promoBtnWhite}>
-              <Text style={styles.promoBtnWhiteTxt}>Subscribe</Text>
-            </TouchableOpacity>
+            {/* Right Image */}
+            <Image
+              source={require('../assets/images/logo/logo.png')}
+              style={styles.promoImage}
+              resizeMode="cover"
+            />
           </View>
 
           {/* Banner 3 – green */}
-          <View style={[styles.promoBanner, { backgroundColor: '#1a6b3c' }]}>
+          <View style={styles.promoBannerContainerss}>
+            {/* Left Content */}
+            <View style={styles.promoBannerLeft}>
+              <Text style={styles.promoTag}>WEEKEND SPECIAL</Text>
+              <Text style={styles.promoTitle}>Subscribe</Text>
+              <Text style={styles.promoDesc}>Up to 60% OFF</Text>
+              <TouchableOpacity style={styles.promoBtn}>
+                <Text style={styles.promoBtnText}>Order Now</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Right Image */}
+            <Image
+              source={require('../assets/images/logo/logo.png')}
+              style={styles.promoImage}
+              resizeMode="cover"
+            />
+          </View>
+          {/* <View style={[styles.promoBanner, { backgroundColor: '#1a6b3c' }]}>
             <Text style={styles.promoTagGreen}>WEEKEND SPECIAL</Text>
             <Text style={styles.promoSubGreen}>Up to 60% OFF</Text>
             <TouchableOpacity style={styles.promoBtnWhite}>
               <Text style={styles.promoBtnWhiteTxt}>Order Now</Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
         </ScrollView>
 
         {/* ── Popular Restaurants ── */}
@@ -256,8 +322,13 @@ const HomeScreen: React.FC = () => {
         >
           {RESTAURANTS.map((r) => (
             <TouchableOpacity key={r.id} style={styles.restCard}>
-              <View style={[styles.restImageBox, { backgroundColor: r.color }]}>
-                <Text style={styles.restEmoji}>{r.emoji}</Text>
+              <View style={styles.restImageContainer}>
+
+                <Image
+                  source={r.image}
+                  style={styles.restImage}
+                  resizeMode="cover"
+                />
                 <View style={styles.ratingBadge}>
                   <Text style={styles.ratingText}>⭐ {r.rating}</Text>
                 </View>
@@ -305,17 +376,19 @@ const HomeScreen: React.FC = () => {
         {/* ── Shop Groceries ── */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Shop Groceries</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Groceries' as never)}>
             <Text style={styles.seeAllText}>See all</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.groceryGrid}>
           {GROCERIES.map((g) => (
             <View key={g.id} style={styles.groceryCard}>
-              <View
-                style={[styles.groceryImageBox, { backgroundColor: g.color }]}
-              >
-                <Text style={styles.groceryEmoji}>{g.emoji}</Text>
+              <View style={styles.groceryImageBox}>
+                <Image
+                  source={g.image}
+                  style={styles.groceryImage}
+                  resizeMode="cover"
+                />
               </View>
               <Text style={styles.groceryWeight}>{g.weight}</Text>
               <Text style={styles.groceryName}>{g.name}</Text>
@@ -333,7 +406,7 @@ const HomeScreen: React.FC = () => {
       </ScrollView>
 
       {/* ── Bottom Tab ── */}
-    </View>
+    </View >
   );
 };
 
@@ -502,48 +575,128 @@ const styles = StyleSheet.create({
   },
 
   // Promo Banners
-  promoScroll: { paddingLeft: 16, marginBottom: 4 },
-  promoBanner: {
-    width: 200,
-    borderRadius: 14,
-    padding: 8,
+  // promoScroll: { paddingLeft: 16, marginBottom: 4 },
+  // promoBanner: {
+  //   width: 200,
+  //   borderRadius: 14,
+  //   padding: 8,
+  //   marginRight: 10,
+  //   height: 100,
+  //   justifyContent: 'space-between',
+  // },
+  // promoTag1: {
+  //   fontSize: 15,
+  //   fontWeight: '900',
+  //   color: '#FF6B35',
+
+  // },
+  // promoSub1: { fontSize: 10, color: '#ccc', flex: 1 },
+  // promoBtn1: {
+  //   backgroundColor: '#FF6B35',
+  //   borderRadius: 14,
+  //   paddingHorizontal: 14,
+  //   paddingVertical: 5,
+  //   alignSelf: 'flex-start',
+  //   marginTop: 8,
+  // },
+  // promoBtnTxt1: { color: '#fff', fontSize: 12, fontWeight: '700' },
+
+  // promoTagBlue: { fontSize: 13, fontWeight: '900', color: '#fff' },
+
+  // promoSubBlue: { fontSize: 9, color: '#cce4ff', lineHeight: 13 },
+
+  // promoTagGreen: { fontSize: 11, fontWeight: '900', color: '#fff' },
+  // promoSubGreen: { fontSize: 9, color: '#b2dfcc', lineHeight: 13, flex: 1 },
+
+  // promoBtnWhite: {
+  //   backgroundColor: '#fff',
+  //   borderRadius: 14,
+  //   paddingHorizontal: 12,
+  //   paddingVertical: 5,
+  //   alignSelf: 'flex-start',
+  //   marginTop: 6,
+  // },
+  // promoBtnWhiteTxt: { color: '#333', fontSize: 11, fontWeight: '700' },
+  promoBannerContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#005FA3',
+    marginHorizontal: 10,
     marginRight: 10,
+    borderRadius: 10,
+    padding: 16,
+    overflow: 'hidden',
+    alignItems: 'center',
+    gap: 8,
     height: 100,
-    justifyContent: 'space-between',
   },
-  promoTag1: {
+  promoBannerContainers: {
+    flexDirection: 'row',
+    backgroundColor: '#1a1a2e',
+    marginHorizontal: 10,
+    marginRight: 10,
+    marginLeft: 16,
+    borderRadius: 10,
+    padding: 8,
+    overflow: 'hidden',
+    alignItems: 'center',
+    gap: 8,
+  },
+  promoBannerContainerss: {
+    flexDirection: 'row',
+    backgroundColor: '#1a6b3c',
+    marginHorizontal: 8,
+    marginRight: 16,
+    borderRadius: 10,
+    padding: 8,
+    overflow: 'hidden',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  promoBannerLeft: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+
+  promoTag: {
+    color: '#fff', fontSize: 12, fontWeight: '700'
+  },
+
+  promoTitle: {
     fontSize: 15,
-    fontWeight: '900',
-    color: '#FF6B35',
-
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 2,
   },
-  promoSub1: { fontSize: 10, color: '#ccc', flex: 1 },
-  promoBtn1: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    alignSelf: 'flex-start',
-    marginTop: 8,
+
+  promoDesc: {
+    fontSize: 10,
+    color: '#B3D9FF',
+    lineHeight: 14,
+    marginBottom: 10,
   },
-  promoBtnTxt1: { color: '#fff', fontSize: 12, fontWeight: '700' },
 
-  promoTagBlue: { fontSize: 13, fontWeight: '900', color: '#fff' },
-
-  promoSubBlue: { fontSize: 9, color: '#cce4ff', lineHeight: 13 },
-
-  promoTagGreen: { fontSize: 11, fontWeight: '900', color: '#fff' },
-  promoSubGreen: { fontSize: 9, color: '#b2dfcc', lineHeight: 13, flex: 1 },
-
-  promoBtnWhite: {
+  promoBtn: {
     backgroundColor: '#fff',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
     alignSelf: 'flex-start',
-    marginTop: 6,
   },
-  promoBtnWhiteTxt: { color: '#333', fontSize: 11, fontWeight: '700' },
+
+  promoBtnText: {
+    color: '#005FA3',
+    fontSize: 10,
+    fontWeight: '700',
+
+  },
+
+  promoImage: {
+    width: 100,
+    height: 80,
+    borderRadius: 12,
+    flexShrink: 0,
+  },
 
   // Restaurants
   restScroll: { paddingLeft: 16 },
@@ -552,15 +705,18 @@ const styles = StyleSheet.create({
     marginRight: 14,
     marginBottom: 4,
   },
-  restImageBox: {
+
+  restImageContainer: {
+    position: 'relative',
+    marginBottom: 8,
+  },
+
+  restImage: {
     width: 170,
     height: 140,
     borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
   },
-  restEmoji: { fontSize: 48 },
+
   ratingBadge: {
     position: 'absolute',
     bottom: 8,
@@ -569,13 +725,44 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 7,
     paddingVertical: 3,
+    zIndex: 10,
   },
-  ratingText: { fontSize: 11, fontWeight: '700', color: '#333' },
-  restName: { fontSize: 14, fontWeight: '700', color: '#111', marginBottom: 4 },
-  restDesc: { fontSize: 11, color: '#888', lineHeight: 15, marginBottom: 6 },
-  discountRow: { flexDirection: 'row', alignItems: 'center' },
-  discountIcon: { fontSize: 12, marginRight: 4 },
-  discountText: { fontSize: 11, color: '#7B2D8B', fontWeight: '600' },
+
+  ratingText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#333',
+  },
+
+  restName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111',
+    marginBottom: 4,
+  },
+
+  restDesc: {
+    fontSize: 11,
+    color: '#888',
+    lineHeight: 15,
+    marginBottom: 6,
+  },
+
+  discountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  discountIcon: {
+    fontSize: 12,
+    marginRight: 4,
+  },
+
+  discountText: {
+    fontSize: 11,
+    color: '#7B2D8B',
+    fontWeight: '600',
+  },
 
   // Cuisines
   cuisineScroll: { paddingLeft: 16 },
@@ -590,10 +777,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   cuisineImage: {
-  width: 64,
-  height: 64,
-  borderRadius: 32,
-},
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+  },
   cuisineEmoji: { fontSize: 30 },
   cuisineName: { fontSize: 11, color: '#333', textAlign: 'center' },
 
@@ -604,6 +791,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     gap: 10,
   },
+  groceryScroll: { paddingLeft: 16 },
   groceryCard: {
     width: '30%',
     backgroundColor: '#fff',
@@ -614,14 +802,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  groceryImageBox: {
-    width: '100%',
-    height: 80,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
+
   groceryEmoji: { fontSize: 32 },
   groceryWeight: { fontSize: 10, color: '#888', marginBottom: 2 },
   groceryName: {
@@ -644,6 +825,17 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  groceryImageBox: {
+    width: '100%',
+    height: 80,
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  groceryImage: {
+    width: '100%',
+    height: '100%',
   },
   addBtnTxt: {
     color: '#fff',
