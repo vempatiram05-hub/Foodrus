@@ -11,12 +11,12 @@ const TABS = [
     active: 'home',
     inactive: 'home-outline',
   },
-  {
-    name: 'Categories',
-    label: 'Categories',
-    active: 'view-grid',
-    inactive: 'view-grid-outline',
-  },
+  // {
+  //   name: 'Categories',
+  //   label: 'Categories',
+  //   active: 'view-grid',
+  //   inactive: 'view-grid-outline',
+  // },
   {
     name: 'Cart',
     label: 'Cart',

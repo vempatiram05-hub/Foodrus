@@ -167,8 +167,20 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.searchInput}>Search for 'pizza' or 'milk'...</Text>
         </TouchableOpacity>
 
+
+
+
+        {/* ── Promotional Banner ── */}
+        <TouchableOpacity activeOpacity={0.9} onPress={() => console.log('Banner pressed')}>
+          <Image
+            source={require('../assets/images/logo/probanner.png')}
+            style={styles.promoBanner}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
+
         {/* ── Hero Banner with Tags ── */}
-        <View style={styles.heroBanner}>
+        {/* <View style={styles.heroBanner}>
           <View style={styles.heroLeftContent}>
             <Text style={styles.heroTitle}>Groceries & Food</Text>
             <Text style={styles.heroSubtitle}>delivery in 10 mins</Text>
@@ -184,14 +196,14 @@ const HomeScreen: React.FC = () => {
             style={styles.heroImage}
             resizeMode="cover"
           />
-        </View>
+        </View> */}
 
         {/* ── Hero Tags Below Banner ── */}
-        <View style={styles.heroTagsWrapper}>
+        {/* <View style={styles.heroTagsWrapper}>
           <Text style={styles.heroTag}>🌿 Fresh products</Text>
           <Text style={styles.heroTag}>👌 Best quality</Text>
           <Text style={styles.heroTag}>⏱ 10 min delivery</Text>
-        </View>
+        </View> */}
 
         {/* ── Explore Categories ── */}
         <View style={styles.sectionHeader}>
@@ -374,7 +386,7 @@ const HomeScreen: React.FC = () => {
         </ScrollView>
 
         {/* ── Shop Groceries ── */}
-        <View style={styles.sectionHeaderRow}>
+        {/* <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Shop Groceries</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Groceries' as never)}>
             <Text style={styles.seeAllText}>See all</Text>
@@ -400,7 +412,7 @@ const HomeScreen: React.FC = () => {
               </View>
             </View>
           ))}
-        </View>
+        </View> */}
 
         <View style={{ height: 20 }} />
       </ScrollView>
@@ -446,19 +458,27 @@ const styles = StyleSheet.create({
   searchIcon: { fontSize: 16, marginRight: 8 },
   searchInput: { flex: 1, fontSize: 14, color: '#333' },
 
+  promoBanner: {
+  width: '100%',
+  height: 275,
+  borderRadius: 12,
+  marginVertical: 12,
+  marginHorizontal: 0,
+},
+
   // Hero Banner
-  heroBanner: {
-    flexDirection: 'row',
-    backgroundColor: '#fff8f0',
-    marginHorizontal: 16,
-    marginBottom: 0,
-    borderRadius: 16,
-    padding: 5,
-    overflow: 'hidden',
-    alignItems: 'center',
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-  },
+  // heroBanner: {
+  //   flexDirection: 'row',
+  //   backgroundColor: '#fff8f0',
+  //   marginHorizontal: 16,
+  //   marginBottom: 0,
+  //   borderRadius: 16,
+  //   padding: 5,
+  //   overflow: 'hidden',
+  //   alignItems: 'center',
+  //   borderBottomLeftRadius: 0,
+  //   borderBottomRightRadius: 0,
+  // },
 
   heroLeftContent: {
     flex: 1,
