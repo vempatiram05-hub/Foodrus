@@ -1,0 +1,672 @@
+{
+  "info": {
+    "_postman_id": "party-management-api",
+    "name": "Party Management API",
+    "description": "Complete API collection for Party Management system including CRUD operations and approval workflow",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Party Management",
+      "item": [
+        {
+          "name": "Get List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text",
+                "disabled": false
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/party/getList?page=1&limit=20&status=APPROVED&store_ids=&region_id=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "party",
+                "getList"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                },
+                {
+                  "key": "status",
+                  "value": "APPROVED",
+                  "disabled": true
+                },
+                {
+                  "key": "store_ids",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "region_id",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get list of parties with optional filtering and pagination.\n\nQuery Parameters:\n- page: Page number (default: 1)\n- limit: Records per page (default: 20)\n- status: PENDING, APPROVED, or REJECTED\n- store_ids: Comma-separated store UUIDs\n- region_id: Region UUID for filtering\n\nResponse includes pagination info (page, limit, total) if pagination params provided."
+          },
+          "response": [
+            {
+              "name": "Success with Pagination",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/party/getList?page=1&limit=10",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "party",
+                    "getList"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Parties retrieved successfully\",\n  \"data\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"store_id\": \"660e8400-e29b-41d4-a716-446655440000\",\n      \"template_id\": \"770e8400-e29b-41d4-a716-446655440000\",\n      \"status\": \"APPROVED\",\n      \"submitted_by\": \"880e8400-e29b-41d4-a716-446655440000\",\n      \"approved_by\": \"990e8400-e29b-41d4-a716-446655440000\",\n      \"approved_at\": \"2024-01-15T11:00:00.000Z\",\n      \"rejected_by\": null,\n      \"rejected_at\": null,\n      \"revision_count\": 0,\n      \"unavailable_items\": [\"product-uuid-1\"],\n      \"created_at\": \"2024-01-15T10:30:00.000Z\",\n      \"updated_at\": \"2024-01-15T11:00:00.000Z\"\n    }\n  ],\n  \"page\": 1,\n  \"limit\": 10,\n  \"total\": 25\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/party/getById/550e8400-e29b-41d4-a716-446655440000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "party",
+                "getById",
+                "550e8400-e29b-41d4-a716-446655440000"
+              ]
+            },
+            "description": "Get a single party by ID. No authentication required."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/party/getById/550e8400-e29b-41d4-a716-446655440000",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "party",
+                    "getById",
+                    "550e8400-e29b-41d4-a716-446655440000"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Party retrieved successfully\",\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"store_id\": \"660e8400-e29b-41d4-a716-446655440000\",\n    \"template_id\": \"770e8400-e29b-41d4-a716-446655440000\",\n    \"status\": \"APPROVED\",\n    \"submitted_by\": \"880e8400-e29b-41d4-a716-446655440000\",\n    \"approved_by\": \"990e8400-e29b-41d4-a716-446655440000\",\n    \"approved_at\": \"2024-01-15T11:00:00.000Z\",\n    \"rejected_by\": null,\n    \"rejected_at\": null,\n    \"revision_count\": 0,\n    \"unavailable_items\": [],\n    \"created_at\": \"2024-01-15T10:30:00.000Z\",\n    \"updated_at\": \"2024-01-15T11:00:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Party",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"store_id\": \"660e8400-e29b-41d4-a716-446655440000\",\n  \"template_id\": \"770e8400-e29b-41d4-a716-446655440000\",\n  \"submitted_by\": \"880e8400-e29b-41d4-a716-446655440000\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/party/createParty",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "party",
+                "createParty"
+              ]
+            },
+            "description": "Create a new party. Requires Parties.create permission.\n\nRequired Fields:\n- store_id: Store UUID (required)\n- submitted_by: User ID (required)\n\nOptional Fields:\n- template_id: Template UUID (optional)"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"store_id\": \"660e8400-e29b-41d4-a716-446655440000\",\n  \"template_id\": \"770e8400-e29b-41d4-a716-446655440000\",\n  \"submitted_by\": \"880e8400-e29b-41d4-a716-446655440000\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/party/createParty",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "party",
+                    "createParty"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Party created successfully\",\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"store_id\": \"660e8400-e29b-41d4-a716-446655440000\",\n    \"template_id\": \"770e8400-e29b-41d4-a716-446655440000\",\n    \"status\": \"PENDING\",\n    \"submitted_by\": \"880e8400-e29b-41d4-a716-446655440000\",\n    \"approved_by\": null,\n    \"approved_at\": null,\n    \"rejected_by\": null,\n    \"rejected_at\": null,\n    \"revision_count\": 0,\n    \"unavailable_items\": [],\n    \"created_at\": \"2024-01-15T10:30:00.000Z\",\n    \"updated_at\": \"2024-01-15T10:30:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Party",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"template_id\": \"new-template-uuid\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/party/updateParty/550e8400-e29b-41d4-a716-446655440000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "party",
+                "updateParty",
+                "550e8400-e29b-41d4-a716-446655440000"
+              ]
+            },
+            "description": "Update a party. Only draft/pending parties can be updated. Requires Parties.edit permission.\n\nOptional Fields:\n- template_id: Update template\n- unavailable_items: Update unavailable items\n\nNote: Status and ownership fields cannot be changed via update."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"template_id\": \"new-template-uuid\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/party/updateParty/550e8400-e29b-41d4-a716-446655440000",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "party",
+                    "updateParty",
+                    "550e8400-e29b-41d4-a716-446655440000"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Party updated successfully\",\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"store_id\": \"660e8400-e29b-41d4-a716-446655440000\",\n    \"template_id\": \"new-template-uuid\",\n    \"status\": \"PENDING\",\n    \"submitted_by\": \"880e8400-e29b-41d4-a716-446655440000\",\n    \"approved_by\": null,\n    \"approved_at\": null,\n    \"rejected_by\": null,\n    \"rejected_at\": null,\n    \"revision_count\": 0,\n    \"unavailable_items\": [],\n    \"created_at\": \"2024-01-15T10:30:00.000Z\",\n    \"updated_at\": \"2024-01-15T10:45:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Party",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/party/deleteParty/550e8400-e29b-41d4-a716-446655440000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "party",
+                "deleteParty",
+                "550e8400-e29b-41d4-a716-446655440000"
+              ]
+            },
+            "description": "Delete a party. Only draft/pending/rejected parties can be deleted. Requires Parties.delete permission."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/party/deleteParty/550e8400-e29b-41d4-a716-446655440000",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "party",
+                    "deleteParty",
+                    "550e8400-e29b-41d4-a716-446655440000"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Party deleted successfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Submit Party",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submitted_by\": \"880e8400-e29b-41d4-a716-446655440000\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/party/submitParty/550e8400-e29b-41d4-a716-446655440000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "party",
+                "submitParty",
+                "550e8400-e29b-41d4-a716-446655440000"
+              ]
+            },
+            "description": "Submit a party for approval. Can re-submit after rejection (increments revision_count, max 3).\n\nRequired Fields:\n- submitted_by: User ID who is submitting"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"submitted_by\": \"880e8400-e29b-41d4-a716-446655440000\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/party/submitParty/550e8400-e29b-41d4-a716-446655440000",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "party",
+                    "submitParty",
+                    "550e8400-e29b-41d4-a716-446655440000"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Party submitted successfully\",\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"store_id\": \"660e8400-e29b-41d4-a716-446655440000\",\n    \"template_id\": \"770e8400-e29b-41d4-a716-446655440000\",\n    \"status\": \"PENDING\",\n    \"submitted_by\": \"880e8400-e29b-41d4-a716-446655440000\",\n    \"approved_by\": null,\n    \"approved_at\": null,\n    \"rejected_by\": null,\n    \"rejected_at\": null,\n    \"revision_count\": 0,\n    \"unavailable_items\": [],\n    \"created_at\": \"2024-01-15T10:30:00.000Z\",\n    \"updated_at\": \"2024-01-15T10:50:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Approve Party",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Looks good, approved!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/party/approveParty/550e8400-e29b-41d4-a716-446655440000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "party",
+                "approveParty",
+                "550e8400-e29b-41d4-a716-446655440000"
+              ]
+            },
+            "description": "Approve a party. Only SubAdmin/Admin can approve. Party must be in PENDING status. Requires Parties.approve permission.\n\nOptional Fields:\n- notes: Approval notes"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"notes\": \"Looks good, approved!\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/party/approveParty/550e8400-e29b-41d4-a716-446655440000",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "party",
+                    "approveParty",
+                    "550e8400-e29b-41d4-a716-446655440000"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Party approved successfully\",\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"store_id\": \"660e8400-e29b-41d4-a716-446655440000\",\n    \"template_id\": \"770e8400-e29b-41d4-a716-446655440000\",\n    \"status\": \"APPROVED\",\n    \"submitted_by\": \"880e8400-e29b-41d4-a716-446655440000\",\n    \"approved_by\": \"990e8400-e29b-41d4-a716-446655440000\",\n    \"approved_at\": \"2024-01-15T11:00:00.000Z\",\n    \"rejected_by\": null,\n    \"rejected_at\": null,\n    \"revision_count\": 0,\n    \"unavailable_items\": [],\n    \"created_at\": \"2024-01-15T10:30:00.000Z\",\n    \"updated_at\": \"2024-01-15T11:00:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Reject Party",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Missing required items\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/party/rejectParty/550e8400-e29b-41d4-a716-446655440000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "party",
+                "rejectParty",
+                "550e8400-e29b-41d4-a716-446655440000"
+              ]
+            },
+            "description": "Reject a party. Only SubAdmin/Admin can reject. Party must be in PENDING status. Allows re-submission with revision counting. Requires Parties.approve permission.\n\nOptional Fields:\n- notes: Rejection reason"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"notes\": \"Missing required items\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/party/rejectParty/550e8400-e29b-41d4-a716-446655440000",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "party",
+                    "rejectParty",
+                    "550e8400-e29b-41d4-a716-446655440000"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Party rejected successfully\",\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"store_id\": \"660e8400-e29b-41d4-a716-446655440000\",\n    \"template_id\": \"770e8400-e29b-41d4-a716-446655440000\",\n    \"status\": \"REJECTED\",\n    \"submitted_by\": \"880e8400-e29b-41d4-a716-446655440000\",\n    \"approved_by\": null,\n    \"approved_at\": null,\n    \"rejected_by\": \"990e8400-e29b-41d4-a716-446655440000\",\n    \"rejected_at\": \"2024-01-15T11:15:00.000Z\",\n    \"revision_count\": 0,\n    \"unavailable_items\": [],\n    \"created_at\": \"2024-01-15T10:30:00.000Z\",\n    \"updated_at\": \"2024-01-15T11:15:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Toggle Item Availability",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": \"product-uuid-123\",\n  \"available\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/party/toggleItemAvailability/550e8400-e29b-41d4-a716-446655440000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "party",
+                "toggleItemAvailability",
+                "550e8400-e29b-41d4-a716-446655440000"
+              ]
+            },
+            "description": "Mark items as available or unavailable in a party. Used by StoreAdmin to manage stock.\n\nRequired Fields:\n- product_id: Product UUID\n- available: Boolean (true/false)"
+          },
+          "response": [
+            {
+              "name": "Success - Mark Unavailable",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"product_id\": \"product-uuid-123\",\n  \"available\": false\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/party/toggleItemAvailability/550e8400-e29b-41d4-a716-446655440000",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "party",
+                    "toggleItemAvailability",
+                    "550e8400-e29b-41d4-a716-446655440000"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Item marked unavailable successfully\",\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"store_id\": \"660e8400-e29b-41d4-a716-446655440000\",\n    \"template_id\": \"770e8400-e29b-41d4-a716-446655440000\",\n    \"status\": \"APPROVED\",\n    \"submitted_by\": \"880e8400-e29b-41d4-a716-446655440000\",\n    \"approved_by\": \"990e8400-e29b-41d4-a716-446655440000\",\n    \"approved_at\": \"2024-01-15T11:00:00.000Z\",\n    \"rejected_by\": null,\n    \"rejected_at\": null,\n    \"revision_count\": 0,\n    \"unavailable_items\": [\"product-uuid-123\"],\n    \"created_at\": \"2024-01-15T10:30:00.000Z\",\n    \"updated_at\": \"2024-01-15T11:20:00.000Z\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "your-jwt-token-here",
+      "type": "string"
+    }
+  ]
+}

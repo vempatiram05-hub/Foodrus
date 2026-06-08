@@ -1,0 +1,122 @@
+{
+  "info": {
+    "name": "HiFoode – Templates",
+    "_postman_id": "hf-templates-collection",
+    "description": "CRUD endpoints for the Templates resource.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:5000", "type": "string" },
+    { "key": "token",    "value": "",                     "type": "string" },
+    { "key": "template_id", "value": "",                  "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Get Template List",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text", "description": "Optional – omit for unauthenticated access" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/templates/getList",
+          "host": ["{{base_url}}"],
+          "path": ["api", "templates", "getList"],
+          "query": [
+            { "key": "search",   "value": "",       "disabled": true, "description": "Search by name or description" },
+            { "key": "store_id", "value": "",       "disabled": true, "description": "Filter by store UUID" },
+            { "key": "type",     "value": "food",   "disabled": true, "description": "food | grocery | bakery" },
+            { "key": "page",     "value": "1",      "disabled": true, "description": "Page number (enables pagination)" },
+            { "key": "limit",    "value": "10",     "disabled": true, "description": "Items per page" }
+          ]
+        },
+        "description": "Public endpoint. Pass Bearer token to apply SubAdmin scoping. Supports search, store_id, type, page, and limit query params."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Template By ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/templates/getTemplateById/{{template_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "templates", "getTemplateById", "{{template_id}}"]
+        },
+        "description": "Public endpoint. Returns a single template by its UUID."
+      },
+      "response": []
+    },
+    {
+      "name": "Create Template",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "name",        "value": "Summer Promo Template", "type": "text" },
+            { "key": "description", "value": "Template used for summer promotions", "type": "text" },
+            { "key": "is_active",   "value": "true",   "type": "text" },
+            { "key": "store_id",    "value": "",        "type": "text",  "description": "UUID – leave empty for a global template" },
+            { "key": "type",        "value": "food",    "type": "text",  "description": "food | grocery | bakery" },
+            { "key": "images",      "src": [],          "type": "file",  "description": "Up to 5 image files" }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/templates/CreateTemplate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "templates", "CreateTemplate"]
+        },
+        "description": "Requires auth + Templates.create permission. Accepts multipart/form-data with up to 5 images."
+      },
+      "response": []
+    },
+    {
+      "name": "Update Template",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "name",        "value": "Updated Template Name",  "type": "text", "disabled": true },
+            { "key": "description", "value": "Updated description",     "type": "text", "disabled": true },
+            { "key": "is_active",   "value": "false",                   "type": "text", "disabled": true },
+            { "key": "store_id",    "value": "",                         "type": "text", "disabled": true },
+            { "key": "type",        "value": "grocery",                  "type": "text", "disabled": true, "description": "food | grocery | bakery" },
+            { "key": "images",      "src": [],                           "type": "file", "disabled": true, "description": "Replaces existing images" }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/templates/UpdateTemplate/{{template_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "templates", "UpdateTemplate", "{{template_id}}"]
+        },
+        "description": "Requires auth + Templates.edit permission. All fields are optional (partial update). Uploading images replaces existing ones."
+      },
+      "response": []
+    },
+    {
+      "name": "Delete Template",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/templates/deleteTemplate/{{template_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "templates", "deleteTemplate", "{{template_id}}"]
+        },
+        "description": "Requires auth + Templates.delete permission. Also removes associated uploaded images from disk."
+      },
+      "response": []
+    }
+  ]
+}
