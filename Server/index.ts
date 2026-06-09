@@ -11,20 +11,24 @@ async function startServer() {
   try {
     await initDB();
 
-    // Confirm PostgREST is accepting connections before proceeding.
-    let supabaseReady = false;
+    // Confirm database is accepting connections before proceeding.
+    let dbReady = false;
     for (let attempt = 1; attempt <= 5; attempt++) {
-      await new Promise((r) => setTimeout(r, 2000));
-      const { error } = await DBconnection.from("users").select("id").limit(1);
-      if (!error || error.message.includes("No rows")) {
-        supabaseReady = true;
-        break;
+      try {
+        const { error } = await DBconnection.from("users").select("id").limit(1);
+        if (!error || (error && error.message && error.message.includes("No rows"))) {
+          dbReady = true;
+          break;
+        }
+        logger.warn(`Waiting for database (attempt ${attempt}/5)`, { error: error?.message });
+      } catch (err: any) {
+        logger.warn(`Waiting for database (attempt ${attempt}/5)`, { error: err.message });
       }
-      logger.warn(`Waiting for schema cache (attempt ${attempt}/5)`, { error: error.message });
+      await new Promise((r) => setTimeout(r, 2000));
     }
 
-    if (!supabaseReady) {
-      logger.error("Supabase schema cache did not refresh in time");
+    if (!dbReady) {
+      logger.error("MySQL database did not become ready in time");
       process.exit(1);
     }
 

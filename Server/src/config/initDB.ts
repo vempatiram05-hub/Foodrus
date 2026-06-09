@@ -1,16 +1,20 @@
-import { Pool } from "pg";
+import mysql from "mysql2/promise";
 import fs from "node:fs";
 import path from "node:path";
 import { logger } from "../utils/logger";
-
 import dotenv from "dotenv";
+
 dotenv.config();
 
 export async function initDB(): Promise<void> {
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-    connectionTimeoutMillis: 8000,
+  const pool = mysql.createPool({
+    host: process.env.MYSQL_HOST || "localhost",
+    port: parseInt(process.env.MYSQL_PORT || "3306", 10),
+    user: process.env.MYSQL_USER || "root",
+    password: process.env.MYSQL_PASSWORD || "",
+    database: process.env.MYSQL_DATABASE || "ruchi_xpress",
+    multipleStatements: true,
+    connectionLimit: 1,
   });
 
   try {
@@ -19,17 +23,17 @@ export async function initDB(): Promise<void> {
     await pool.query(sql);
     logger.info("Database tables initialized successfully");
 
-    const result = await pool.query(
-      `SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`
-    );
+    const [rows]: any = await pool.query("SHOW TABLES");
+    const dbName = process.env.MYSQL_DATABASE || "ruchi_xpress";
+    const tables = rows.map((r: any) => Object.values(r)[0]);
     logger.info("Tables in database", {
-      tables: result.rows.map((r: any) => r.tablename),
+      tables,
     });
 
   } catch (err: any) {
     if (err.code === "ENOTFOUND" || err.code === "ECONNREFUSED" || err.code === "ETIMEDOUT") {
-      logger.warn("initDB: Supabase direct connection unavailable from this host — skipping schema bootstrap (tables already exist in Supabase)", {
-        host: err.hostname ?? process.env.DATABASE_URL,
+      logger.warn("initDB: MySQL connection unavailable from this host — skipping schema bootstrap", {
+        host: err.hostname ?? process.env.MYSQL_HOST,
       });
       return;
     }

@@ -1,7 +1,15 @@
-import { Pool } from "pg";
+import mysql from "mysql2/promise";
+import dotenv from "dotenv";
 
-export const dbPool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-  max: 10,
+dotenv.config();
+
+export const dbPool = mysql.createPool({
+  host: process.env.MYSQL_HOST || "localhost",
+  port: parseInt(process.env.MYSQL_PORT || "3306", 10),
+  user: process.env.MYSQL_USER || "root",
+  password: process.env.MYSQL_PASSWORD || "",
+  database: process.env.MYSQL_DATABASE || "ruchi_xpress",
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
 });

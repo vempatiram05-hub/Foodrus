@@ -29,14 +29,12 @@ const envSchema = z.object({
     .default("development"),
   PORT: z.coerce.number().min(1).max(65535).default(5000),
 
-  // Database — DATABASE_URL must point at Supabase (see override comment above)
-  SUPABASE_URL: z.url({ message: "SUPABASE_URL must be a valid URL" }),
-  SUPABASE_SERVICE_ROLE_KEY: z
-    .string()
-    .min(10, "SUPABASE_SERVICE_ROLE_KEY is too short"),
-  DATABASE_URL: z
-    .string()
-    .min(10, "DATABASE_URL is required for migrations"),
+  // Database
+  MYSQL_HOST: z.string().default("localhost"),
+  MYSQL_PORT: z.coerce.number().default(3306),
+  MYSQL_USER: z.string().default("root"),
+  MYSQL_PASSWORD: z.string().default(""),
+  MYSQL_DATABASE: z.string().default("ruchi_xpress"),
 
   // JWT
   JWT_SECRET: z

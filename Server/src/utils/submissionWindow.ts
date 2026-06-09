@@ -31,3 +31,8 @@ export function checkSubmissionWindow(targetDateStr: string): WindowCheck {
   return { valid: true, opensAt, closesAt };
 }
 
+export function autoRejectDeadline(targetDateStr: string): Date {
+  const targetMidnight = new Date(`${targetDateStr}T00:00:00.000Z`);
+  return new Date(targetMidnight.getTime() - 40 * 60 * 60 * 1000);
+}
+

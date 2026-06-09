@@ -205,7 +205,7 @@ export class SubcategoryController {
 
   async getByCategoryId(req: Request, res: Response) {
     try {
-      const categoryId = req.params.category_id;
+      const categoryId = req.params.category_id as string;
       const userPayload = (req as any).user as any;
 
       if (userPayload?.role_name === "SubAdmin") {

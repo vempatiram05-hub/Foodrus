@@ -20,6 +20,6 @@
     "lib": ["es2022", "dom"]
   },
   "ignoreDeprecations": "6.0",
-  "include": ["src/**/*", "migrations/runMigrations.ts"],
+  "include": ["./*.ts", "src/**/*", "migrations/**/*"],
   "exclude": ["node_modules"]
 }

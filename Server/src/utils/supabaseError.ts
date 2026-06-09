@@ -34,8 +34,12 @@ export function normalizeSupabaseError(
   // Foreign key constraint violation (cannot delete item used elsewhere)
   if (
     err.code === "23503" ||
-    (err.message && /violates foreign key constraint/i.test(err.message)) ||
-    (err.details && /violates foreign key constraint/i.test(err.details))
+    err.errno === 1451 ||
+    err.errno === 1452 ||
+    err.code === "ER_ROW_IS_REFERENCED_2" ||
+    err.code === "ER_NO_REFERENCED_ROW_2" ||
+    (err.message && /violates foreign key constraint|foreign key constraint/i.test(err.message)) ||
+    (err.details && /violates foreign key constraint|foreign key constraint/i.test(err.details))
   ) {
     if (operation === "delete") {
       return { message: "Cannot delete this item because it is referenced by other records. Remove or update those records first." };
@@ -47,7 +51,13 @@ export function normalizeSupabaseError(
   }
 
   // Unique constraint violation
-  if (err.code === "23505" || (err.details && /unique/i.test(err.details))) {
+  if (
+    err.code === "23505" ||
+    err.errno === 1062 ||
+    err.code === "ER_DUP_ENTRY" ||
+    (err.message && /duplicate entry|unique/i.test(err.message)) ||
+    (err.details && /unique/i.test(err.details))
+  ) {
     switch (operation) {
       case "create":
         return { message: "Creation failed: this entry already exists. Please use a different value or check for duplicates." };
@@ -88,22 +98,27 @@ export function normalizeSupabaseError(
   // Connection or authentication issues
   if (
     err.code === "28P01" ||
+    err.errno === 1045 ||
+    err.code === "ER_ACCESS_DENIED_ERROR" ||
     (err.details && /authentication/i.test(err.details))
   ) {
     return { message: "Database authentication failed. Please contact support." };
   }
   if (
     err.code === "ECONNREFUSED" ||
+    err.errno === 2003 ||
+    err.code === "ER_CONN_HOST_ERROR" ||
     (err.details && /connection/i.test(err.details))
   ) {
     return { message: "Unable to connect to the database. Please try again later." };
   }
 
-
   // Numeric field overflow (e.g. lat/lng out of range)
   if (
     err.code === '22003' ||
-    (err.message && /numeric field overflow/i.test(err.message))
+    err.errno === 1264 ||
+    err.code === "ER_WARN_DATA_OUT_OF_RANGE" ||
+    (err.message && /numeric field overflow|out of range/i.test(err.message))
   ) {
     return { message: 'A numeric value is out of the allowed range. Check that latitude is between -90 and 90 and longitude is between -180 and 180.' };
   }

@@ -50,31 +50,39 @@ export async function bootMasterAdmin(): Promise<string | null> {
       throw new Error("Invalid ADMIN_PERMISSIONS JSON format");
     }
 
-    const { data: inserted, error } = await DBconnection.from("users").insert({
-      role_name: "Admin",
-      account_status: "active",
-
-      admin_id: null,
-      superadmin_id: null,
-      sub_admin_id: null,
-      store_admin_id: null,
-
-      email,
-      phone,
-      password: hashedPassword,
-      full_name: "Admin",
-      is_active: true,
-      permissions,
-
-    }).select("id").single<AdminIdRow>();
+    const { data, error } = await DBconnection.from("users")
+      .insert({
+        role_name: "Admin",
+        account_status: "active",
+        admin_id: null,
+        superadmin_id: null,
+        sub_admin_id: null,
+        store_admin_id: null,
+        email,
+        phone,
+        password: hashedPassword,
+        full_name: "Admin",
+        is_active: true,
+        permissions,
+      })
+      .select("id");
 
     if (error) throw error;
-
+    const adminId = data[0].id;
     logger.info("Admin user created successfully");
-    return inserted.id;
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    logger.error("Error in bootMasterAdmin", { message });
-    return null;
-  }
+    return adminId;
+
+
+  } catch (err: any) {
+  console.error("bootMasterAdmin ERROR:", err);
+
+  logger.error("Error in bootMasterAdmin", {
+    message: err?.message,
+    details: err?.details,
+    hint: err?.hint,
+    code: err?.code,
+  });
+
+  return null;
+}
 }

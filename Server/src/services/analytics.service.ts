@@ -65,7 +65,7 @@ export const getRevenueByRegionService = async (filters: FilterParams = {}) => {
         stores: regionStoreIds.length,
       };
     })
-    .sort((a, b) => b.revenue - a.revenue);
+    .sort((a: any, b: any) => b.revenue - a.revenue);
 };
 
 export const getMenuComplianceByStoreService = async () => {

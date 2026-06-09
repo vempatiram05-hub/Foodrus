@@ -9,6 +9,7 @@ const service = new UniqueService();
 
 interface Order {
   id: string;
+  order_number: string;
   user_id: string;
   store_id: string;
   order_status: string;

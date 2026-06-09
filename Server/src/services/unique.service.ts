@@ -60,7 +60,7 @@ export class UniqueService {
 
   /* GET BY ID */
   async getDataById<T = any>(
-    id: string,
+    id: any,
     table: string
   ): Promise<T> {
     const { data, error } = await DBconnection
@@ -84,7 +84,7 @@ export class UniqueService {
   /* UPDATE BY ID */
   async updateById<T = any>(
     table: string,
-    id: string,
+    id: any,
     payload: Partial<T>
   ): Promise<T> {
     const updatePayload = {
@@ -113,7 +113,7 @@ export class UniqueService {
   /* DELETE BY ID */
   async deleteData(
     table: string,
-    id: string
+    id: any
   ): Promise<{ message: string }> {
     const { data, error } = await DBconnection
       .from(table)
@@ -136,7 +136,7 @@ export class UniqueService {
   async getDataByField<T = any>(
     table: string,
     field: string,
-    value: string | number | boolean | null,
+    value: any,
     checkIsActive = false
   ): Promise<T[]> {
     let query = DBconnection

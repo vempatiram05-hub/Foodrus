@@ -966,7 +966,7 @@ export const forgotPasswordController = async (req: Request, res: Response) => {
 
 export const getUsersBySuperAdmin = async (req: Request, res: Response) => {
   try {
-    const { superadminId } = req.params;
+    const superadminId = req.params.superadminId as string;
     if (!superadminId) return res.status(400).json({ success: false, message: 'superadminId is required' });
 
     const search = (getQueryString(req.query, 'search') || '').trim();
@@ -1271,7 +1271,7 @@ export const getUserById = async (req: Request, res: Response) => {
 // ---------------- GET USERS BY STORE ADMIN ----------------
 export const getUsersByStoreAdmin = async (req: Request, res: Response) => {
   try {
-    const { storeAdminId } = req.params;
+    const storeAdminId = req.params.storeAdminId as string;
     if (!storeAdminId) return res.status(400).json({ success: false, message: "storeAdminId is required" });
 
     const search = (getQueryString(req.query, 'search') || '').trim();
@@ -1305,7 +1305,7 @@ export const getUsersByStoreAdmin = async (req: Request, res: Response) => {
 // ---------------- GET USERS BY SUB ADMIN ----------------
 export const getUsersBySubAdmin = async (req: Request, res: Response) => {
   try {
-    const { subAdminId } = req.params;
+    const subAdminId = req.params.subAdminId as string;
     if (!subAdminId) return res.status(400).json({ success: false, message: 'subAdminId is required' });
 
     const search = (getQueryString(req.query, 'search') || '').trim();
@@ -2171,7 +2171,7 @@ export const getUserStats = async (req: Request, res: Response) => {
     if (!caller?.role_name) return res.status(401).json({ success: false, message: 'Unauthorized' });
     if (caller.role_name === 'Customer') return res.status(403).json({ success: false, message: 'Forbidden' });
 
-    const storeId = getQueryString(req, 'store_id') || null;
+    const storeId = getQueryString(req.query, 'store_id') || null;
 
     const ROLES = ['Admin', 'SuperAdmin', 'SubAdmin', 'StoreAdmin', 'Employee', 'Customer'] as const;
 

@@ -59,7 +59,7 @@ static getById(req: Request, res: Response, next: NextFunction) {
 }
   /* DELETE PAYMENT METHOD */
   static async delete(req: Request, res: Response, next: NextFunction) {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
     if (!id || !UUID_REGEX.test(id)) {
@@ -140,7 +140,7 @@ static getById(req: Request, res: Response, next: NextFunction) {
       }
       const updated = await UniqueService.prototype.updateById(
         TABLE,
-        req.params.id,
+        req.params.id as string,
         payload
       );
       return res.json({

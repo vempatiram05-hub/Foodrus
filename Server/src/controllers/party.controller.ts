@@ -115,7 +115,7 @@ export class PartyController {
       }
 
       // Insert party record
-      const insertData = {
+      const insertData: Partial<PartyRecord> = {
         store_id: payload.store_id,
         template_id: payload.template_id || null,
         product_id: productIds,
