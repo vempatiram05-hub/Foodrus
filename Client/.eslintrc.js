@@ -9,6 +9,8 @@
 module.exports = {
   root: true,
   extends: '@react-native',
+  requireConfigFile: false,
+  parser: '@typescript-eslint/parser',
   ignorePatterns: [
     'babel.config.js',
     'metro.config.js',

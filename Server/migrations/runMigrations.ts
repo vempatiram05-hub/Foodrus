@@ -23,7 +23,7 @@ export async function runMigrations(): Promise<void> {
     throw err;
   } finally {
     if (connection) {
-      await connection.end().catch(() => {});
+      await connection.end().catch(() => { });
     }
   }
 }

@@ -1,27 +1,28 @@
 import fs from "node:fs";
 import path from "node:path";
 import axios from "axios";
-import FormData from "form-data";
 import { logger } from "./logger";
+import nodemailer from "nodemailer";
 
 /* ============================================================
    MAILGUN REST API — NO SMTP, NO NODEMAILER
    Env vars required: MAILGUN_API_KEY, MAILGUN_DOMAIN, MAILGUN_FROM_EMAIL
    ============================================================ */
 
-const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY || "";
-const MAILGUN_DOMAIN  = process.env.MAILGUN_DOMAIN  || "";
-const MAILGUN_FROM    = process.env.MAILGUN_FROM_EMAIL || `noreply@${MAILGUN_DOMAIN}`;
-const MAILGUN_BASE    = `https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`;
+const ZEPTOMAIL_FROM_EMAIL = process.env.ZEPTOMAIL_FROM_EMAIL || "";
+const ZEPTOMAIL_API_KEY = process.env.ZEPTOMAIL_API_KEY || "";
+const transporter = nodemailer.createTransport({
+  host: "smtp.zeptomail.in",
+  port: 465,
+  secure: true,
+  auth: {
+    user: ZEPTOMAIL_FROM_EMAIL,
+    pass: ZEPTOMAIL_API_KEY,
+  },
+});
 
 /* ---- Core sender: posts a FormData payload to Mailgun Messages API ---- */
-async function mailgunPost(form: FormData): Promise<any> {
-  const auth = Buffer.from(`api:${MAILGUN_API_KEY}`).toString("base64");
-  const res = await axios.post(MAILGUN_BASE, form, {
-    headers: { Authorization: `Basic ${auth}`, ...form.getHeaders() },
-  });
-  return res.data;
-}
+
 
 /* ---- Simple HTML send (no attachment) ---- */
 export async function sendHtmlEmail(
@@ -29,13 +30,14 @@ export async function sendHtmlEmail(
   subject: string,
   html: string
 ): Promise<any> {
-  const form = new FormData();
-  form.append("from",    MAILGUN_FROM);
-  form.append("to",      Array.isArray(to) ? to.join(",") : to);
-  form.append("subject", subject);
-  form.append("html",    html);
-  const result = await mailgunPost(form);
-  logger.info(`[Mailgun] "${subject}" sent`, { messageId: result.id });
+  const mailOptions = {
+    from: process.env.ZEPTOMAIL_FROM_EMAIL,
+    to,
+    subject,
+    html,
+  };
+  const result = await transporter.sendMail(mailOptions);
+  logger.info(`[ZeptoMail] "${subject}" sent`, { messageId: result.messageId });
   return result;
 }
 
@@ -50,29 +52,28 @@ export const generateOTP = (expiryMinutes = 15) => {
 };
 
 export const sendOTPToEmail = async (to: any, otp: any) => {
-  const html = `
-    <div style="font-family:'Poppins',Arial,sans-serif; color:#2b2b2b; background:#fafafa; padding:20px; border-radius:10px;">
-      <h2 style="color:#ff5722; margin-bottom:10px;">HiFoode – Email Verification</h2>
-      <p>Thank you for joining <strong>HiFoode</strong>! To verify your email, please use the OTP given below:</p>
-      <div style="font-size:2em; font-weight:700; margin:25px 0; color:#2977d0; letter-spacing:3px;">${otp}</div>
-      <p>If you didn't request this OTP, please ignore this email — your account is safe.</p>
-      <p>Need help? Just reply to <strong>${MAILGUN_FROM}</strong>. Our support team is always here for you!</p>
-      <p style="margin-top:20px;">Warm regards,<br/><strong>The HiFoode Team</strong></p>
-    </div>`;
-  await sendHtmlEmail(to, "HiFoode Registration OTP – Verify Your Email", html);
+  const html = `<div style="font-family:'Poppins',Arial,sans-serif; color:#2b2b2b; background:#fafafa; padding:20px; border-radius:10px;">
+    <h2 style="color:#ff5722; margin-bottom:10px;">Ruchi Xpress – Email Verification</h2>
+    <p>Thank you for joining <strong>Ruchi Xpress</strong>! To verify your email, please use the OTP given below:</p>
+    <div style="font-size:2em; font-weight:700; margin:25px 0; color:#2977d0; letter-spacing:3px;">${otp}</div>
+    <p>If you didn't request this OTP, please ignore this email — your account is safe.</p>
+     <p>Need help? Just reply to <strong>${ZEPTOMAIL_FROM_EMAIL}</strong>. Our support team is always here for you!</p>
+    <p style="margin-top:20px;">Warm regards,<br/><strong>The Ruchi Xpress Team</strong></p>
+  </div>`;
+  await sendHtmlEmail(to, "Ruchi Xpress Registration OTP – Verify Your Email", html);
 };
 
 export const sendForgotPasswordEmail = async (to: any, otp: any) => {
   const html = `
     <div style="font-family:'Poppins',Arial,sans-serif; color:#2b2b2b; background:#fafafa; padding:20px; border-radius:10px;">
       <h2 style="color:#ff5722; margin-bottom:10px;">Forgot your password? No worries!</h2>
-      <p>We received a request to reset your <strong>HiFoode</strong> account password. Use the OTP below:</p>
+      <p>We received a request to reset your <strong>Ruchi Xpress</strong> account password. Use the OTP below:</p>
       <div style="font-size:2em; font-weight:700; margin:25px 0; color:#2261ff; letter-spacing:3px;">${otp}</div>
       <p>This OTP is valid for <strong>1 minute</strong>.</p>
       <p>If you didn't request a password reset, simply ignore this email — your account remains secure.</p>
-      <p style="margin-top:20px;">With best regards,<br/><strong>The HiFoode Team</strong></p>
+      <p style="margin-top:20px;">With best regards,<br/><strong>The Ruchi Xpress Team</strong></p>
     </div>`;
-  await sendHtmlEmail(to, "HiFoode Password Reset – We're Here to Help!", html);
+  await sendHtmlEmail(to, "Ruchi Xpress Password Reset – We're Here to Help!", html);
 };
 
 /* ============================================================
@@ -126,9 +127,9 @@ export const sendOrderPlacedEmail = async ({
 
   const html = `
     <div style="font-family:Poppins,Arial,sans-serif; padding:10px;">
-      <h2 style="color:#ff5722;">HiFoode</h2>
+      <h2 style="color:#ff5722;">Ruchi Xpress</h2>
       ${message}
-      <p style="margin-top:20px;">Regards,<br/><strong>HiFoode Team</strong></p>
+      <p style="margin-top:20px;">Regards,<br/><strong>Ruchi Xpress Team</strong></p>
     </div>`;
 
   await sendHtmlEmail(to, subject, html);
@@ -194,8 +195,8 @@ export const sendInvoiceEmail = async (
     /* --- Build item rows --- */
     let itemsHtmlRows = "";
     orderItems.forEach((item, index) => {
-      const name      = item.name || item.product_name || item.menu_name || "";
-      const qty       = item.quantity || 0;
+      const name = item.name || item.product_name || item.menu_name || "";
+      const qty = item.quantity || 0;
       const unitPrice = item.unit_price || item.price || 0;
       const totalPrice = qty * unitPrice;
 
@@ -211,11 +212,11 @@ export const sendInvoiceEmail = async (
     });
 
     /* --- Build cost breakdown --- */
-    const subtotal    = customTotals?.subtotal    ?? order.subtotal_amount  ?? 0;
-    const tax         = customTotals?.tax         ?? order.tax_amount       ?? 0;
-    const deliveryFee = customTotals?.deliveryFee ?? order.delivery_fee     ?? 0;
-    const discount    = customTotals?.discount    ?? order.discount_amount  ?? 0;
-    const finalTotal  = customTotals?.total       ?? order.total_amount     ?? 0;
+    const subtotal = customTotals?.subtotal ?? order.subtotal_amount ?? 0;
+    const tax = customTotals?.tax ?? order.tax_amount ?? 0;
+    const deliveryFee = customTotals?.deliveryFee ?? order.delivery_fee ?? 0;
+    const discount = customTotals?.discount ?? order.discount_amount ?? 0;
+    const finalTotal = customTotals?.total ?? order.total_amount ?? 0;
 
     const breakdownHtml = `
       <tr>
@@ -257,7 +258,7 @@ export const sendInvoiceEmail = async (
     /* --- Build HTML body --- */
     const htmlBody = `
       <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #333; max-width: 650px; margin: 0 auto; border: 1px solid #eee; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-        <h2 style="color: #ff5722; text-align: center; margin-bottom: 30px; font-size: 24px;">HiFoode – Order Invoice</h2>
+        <h2 style="color: #ff5722; text-align: center; margin-bottom: 30px; font-size: 24px;">Ruchi Xpress – Order Invoice</h2>
         <p style="font-size: 16px;">Hi ${customer?.full_name || "Customer"},</p>
         <p style="font-size: 14px; color: #555;">Thank you for your order! Your invoice details are listed below for your reference.</p>
         <p style="margin-top: 20px;"><strong>Order ID:</strong> <span style="color: #2b2b2b;">${order.order_number}</span></p>
@@ -280,24 +281,26 @@ export const sendInvoiceEmail = async (
         <p style="margin-top: 30px; font-size: 14px; text-align: center; color: #444;">Please find the PDF invoice attached to this email.</p>
         <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px; text-align: center;">
           <p style="font-size: 16px; font-weight: bold; color: #ff5722; margin-bottom: 5px;">Thank you for ordering with us!</p>
-          <p style="font-size: 13px; color: #888;">Warm regards, The HiFoode Team</p>
+          <p style="font-size: 13px; color: #888;">Warm regards, The Ruchi Xpress Team</p>
         </div>
       </div>`;
 
     /* --- Send via Mailgun API with PDF attachment --- */
-    const form = new FormData();
-    form.append("from",    MAILGUN_FROM);
-    form.append("to",      validEmails.join(","));
-    form.append("subject", `Invoice for Order ${order.order_number}`);
-    form.append("html",    htmlBody);
-    form.append(
-      "attachment",
-      fs.createReadStream(invoicePath),
-      { filename: path.basename(invoicePath), contentType: "application/pdf" }
-    );
-
-    const result = await mailgunPost(form);
-    logger.info("Invoice email sent", { messageId: result.id, orderNumber: order.order_number });
+    const mailOptions = {
+      from: process.env.ZEPTOMAIL_FROM_EMAIL,
+      to: validEmails,
+      subject: `Invoice for Order ${order.order_number}`,
+      html: htmlBody,
+      attachments: [
+        {
+          filename: path.basename(invoicePath),
+          path: invoicePath,
+          contentType: "application/pdf",
+        },
+      ],
+    };
+    const result = await transporter.sendMail(mailOptions);
+    logger.info("Invoice email sent", { messageId: result.messageId, orderNumber: order.order_number });
     return result;
 
   } catch (error: any) {

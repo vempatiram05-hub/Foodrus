@@ -55,7 +55,7 @@ export async function getUserOtp(userId: string, otpCode: string) {
 
   // Sort latest first
   const sorted = Array.isArray(records)
-    ? records.slice().sort((a: {created_at?: string}, b: {created_at?: string}) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())
+    ? records.slice().sort((a: { created_at?: string }, b: { created_at?: string }) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())
     : [];
 
   // Verify the plaintext OTP against the stored hash
@@ -192,8 +192,10 @@ export const register = async (req: Request, res: Response) => {
       });
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     /* ================= EMAIL FORMAT VALIDATION ================= */
-    if (!isValidEmail(email)) {
+    if (!isValidEmail(normalizedEmail)) {
       return res.status(400).json({ success: false, message: "Invalid email format" });
     }
 
@@ -214,7 +216,7 @@ export const register = async (req: Request, res: Response) => {
 
     /* ================= DUPLICATE CHECK ================= */
     const emailExists =
-      (await uniqueService.getDataByField(TABLE, "email", email)).length > 0;
+      (await uniqueService.getDataByField(TABLE, "email", normalizedEmail)).length > 0;
     const phoneExists =
       formattedPhone &&
       (await uniqueService.getDataByField(TABLE, "phone", formattedPhone)).length > 0;
@@ -351,8 +353,14 @@ export const register = async (req: Request, res: Response) => {
         .from("stores")
         .select("id, store_admin_id")
         .eq("id", bodyStoreId)
-        .single();
-      if (!storeRecord || storeRecord.store_admin_id !== creator.id) {
+        .maybeSingle();
+      if (!storeRecord) {
+        return res.status(400).json({
+          success: false,
+          message: "Store not found",
+        });
+      }
+      if (storeRecord.store_admin_id !== creator.id) {
         return res.status(403).json({
           success: false,
           message: "The provided store does not belong to you",
@@ -416,7 +424,7 @@ export const register = async (req: Request, res: Response) => {
 
     /* ================= CREATE USER ================= */
     let user: any = await uniqueService.create(TABLE, {
-      email,
+      email: normalizedEmail,
       phone: formattedPhone ?? null,
       full_name,
       role_name,
@@ -433,9 +441,11 @@ export const register = async (req: Request, res: Response) => {
       images: [],
     });
 
+    console.log("userCreation", user);
+
     // fallback fetch if service doesn't return id
     if (!user?.id) {
-      const fetched = await uniqueService.getDataByField(TABLE, "email", email);
+      const fetched = await uniqueService.getDataByField(TABLE, "email", normalizedEmail);
       user = fetched[0];
     }
 
@@ -451,7 +461,7 @@ export const register = async (req: Request, res: Response) => {
     /* ================= CUSTOMER OTP ================= */
     if (isCustomerRole) {
       const { otp } = generateOTP(6); // reuse function
-      await createUserOtp(user.id, otp, 1);
+      await createUserOtp(user.id, otp, 10); // 10 minutes expiration
       let emailSent = true;
       try {
         await sendOTPToEmail(user.email, otp);
@@ -557,10 +567,21 @@ export const validateOTP = async (req: Request, res: Response) => {
     }
 
     // ---------- ACTIVATE USER ----------
-    await uniqueService.updateById(TABLE, user.id, {
-      is_active: true,
+    if (user.account_status === "suspended") {
+      return res.status(403).json({
+        success: false,
+        message: "Account suspended. Contact support.",
+      });
+    }
+
+    const updateResult = await uniqueService.updateById<User>(TABLE, user.id, {
+      is_active: 1 as unknown as boolean,
       account_status: "active",
-    });
+    } as any);
+
+    console.log(
+      JSON.stringify(updateResult, null, 2)
+    );
 
     // ---------- DELETE OTP ----------
     await deleteUserOtp(otpRecord.id);
@@ -568,6 +589,7 @@ export const validateOTP = async (req: Request, res: Response) => {
     return res.json({
       success: true,
       message: "OTP verified successfully",
+      data: sanitizeUser(updateResult),
     });
 
   } catch (err: any) {
@@ -736,7 +758,7 @@ export const sendLoginOtp = async (req: Request, res: Response) => {
 
     // Find user
     const users = isEmail
-      ? await uniqueService.getDataByField(TABLE, "email", login)
+      ? await uniqueService.getDataByField(TABLE, "email", login.toLowerCase())
       : await uniqueService.getDataByField(TABLE, "phone", formattedPhone);
 
     const user = users?.[0];
@@ -751,7 +773,7 @@ export const sendLoginOtp = async (req: Request, res: Response) => {
     // Generate OTP
     const { otp } = generateOTP(6);
 
-    await createUserOtp(user.id, otp, 1);
+    await createUserOtp(user.id, otp, 10); // 10 minutes expiration
 
     // Send OTP
     if (isEmail) {
@@ -914,9 +936,11 @@ export const forgotPasswordController = async (req: Request, res: Response) => {
     const isEmail = isValidEmail(login);
 
     let users;
+    let normalizedLogin = login;
 
     if (isEmail) {
-      users = await uniqueService.getDataByField(TABLE, "email", login);
+      normalizedLogin = login.toLowerCase();
+      users = await uniqueService.getDataByField(TABLE, "email", normalizedLogin);
     } else {
       let formattedPhone: string;
       try {
@@ -927,6 +951,7 @@ export const forgotPasswordController = async (req: Request, res: Response) => {
           message: err.message || "Invalid phone number",
         });
       }
+      normalizedLogin = formattedPhone;
       users = await uniqueService.getDataByField(TABLE, "phone", formattedPhone);
     }
 
@@ -941,7 +966,8 @@ export const forgotPasswordController = async (req: Request, res: Response) => {
 
     const { otp } = generateOTP(6);
 
-    await createUserOtp(user.id, otp, 1);
+    // Set a more forgiving expiry for forgot-password OTPs (10 minutes)
+    await createUserOtp(user.id, otp, 10);
 
     // Send OTP
     if (isEmail) {
@@ -997,17 +1023,31 @@ export const getUsersBySuperAdmin = async (req: Request, res: Response) => {
 // ---------------- VERIFY FORGOT PASSWORD OTP ----------------
 export const verifyForgotPasswordOtp = async (req: Request, res: Response) => {
   try {
-    const { email, otp } = req.body;
+    const { emailOrPhone, otp } = req.body;
 
-    if (!email || !otp) {
-      return res.status(400).json({ success: false, message: "Email and OTP are required" });
-    }
-    if (!isValidEmail(email.trim())) {
-      return res.status(400).json({ success: false, message: "Invalid email format" });
+    if (!emailOrPhone || !otp) {
+      return res.status(400).json({ success: false, message: "Email or Phone and OTP are required" });
     }
 
-    const users = await uniqueService.getDataByField(TABLE, "email", email.trim());
-    const user = users?.[0];
+    const login = emailOrPhone.trim();
+    let user: User | undefined;
+
+    if (login.includes("@")) {
+      if (!isValidEmail(login)) {
+        return res.status(400).json({ success: false, message: "Invalid email format" });
+      }
+      const users = await uniqueService.getDataByField<User>(TABLE, "email", login.toLowerCase());
+      user = users?.[0];
+    } else {
+      let formattedPhone: string;
+      try {
+        formattedPhone = formatPhoneNumber(login);
+      } catch (err: any) {
+        return res.status(400).json({ success: false, message: err.message || "Invalid phone number" });
+      }
+      const users = await uniqueService.getDataByField<User>(TABLE, "phone", formattedPhone);
+      user = users?.[0];
+    }
 
     if (!user) {
       return res.status(401).json({ success: false, message: "Invalid credentials" });
@@ -1109,32 +1149,47 @@ export const resendOtp = async (req: Request, res: Response) => {
 // ---------------- UPDATE PASSWORD ----------------
 export const updatePasswordController = async (req: Request, res: Response) => {
   try {
-    const { email, newPassword, otp } = req.body;
+    const { emailOrPhone, newPassword, otp } = req.body;
 
-    if (!email || !newPassword || !otp) {
+    if (!emailOrPhone || !newPassword || !otp) {
       return res.status(400).json({
         success: false,
-        message: "Email, OTP and newPassword are required",
+        message: "Email or Phone, OTP and newPassword are required",
       });
     }
-    if (!isValidEmail(email.trim())) {
-      return res.status(400).json({ success: false, message: "Invalid email format" });
+
+    const login = emailOrPhone.trim();
+    let user: User | undefined;
+
+    if (login.includes("@")) {
+      if (!isValidEmail(login)) {
+        return res.status(400).json({ success: false, message: "Invalid email format" });
+      }
+      const users = await uniqueService.getDataByField(TABLE, "email", login.toLowerCase());
+      user = users?.[0];
+    } else {
+      let formattedPhone: string;
+      try {
+        formattedPhone = formatPhoneNumber(login);
+      } catch (err: any) {
+        return res.status(400).json({ success: false, message: err.message || "Invalid phone number" });
+      }
+      const users = await uniqueService.getDataByField(TABLE, "phone", formattedPhone);
+      user = users?.[0];
     }
-    // ✅ password strength check (ADD HERE)
-    if (newPassword.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: "Password must be at least 6 characters",
-      });
-    }
-    // find user
-    const users = await uniqueService.getDataByField(TABLE, "email", email);
-    const user = users?.[0];
 
     if (!user) {
       return res.status(401).json({
         success: false,
         message: "Invalid credentials",
+      });
+    }
+
+    // ✅ password strength check (ADD HERE)
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters",
       });
     }
 
@@ -1148,8 +1203,9 @@ export const updatePasswordController = async (req: Request, res: Response) => {
       });
     }
 
-    // check expiry
-    if (new Date() > new Date(otpRecord.expires_at)) {
+    // check expiry — normalize DB datetime that may contain a space
+    const expiryDate = new Date(String(otpRecord.expires_at).replace(" ", "T"));
+    if (new Date().getTime() > expiryDate.getTime()) {
       return res.status(400).json({
         success: false,
         message: "OTP expired",

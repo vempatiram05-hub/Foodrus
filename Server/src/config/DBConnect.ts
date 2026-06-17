@@ -300,6 +300,7 @@ class QueryBuilder<T = any[]> implements PromiseLike<{ data: T; error: any; coun
   }
 
   private async execute(): Promise<any> {
+    // console.log("DBConnect.ts loaded - MYSQL VERSION");
     const pool = initializePool();
     let sql = "";
     const params: any[] = [];
@@ -409,7 +410,12 @@ class QueryBuilder<T = any[]> implements PromiseLike<{ data: T; error: any; coun
       sql = `UPDATE \`${this.tableName}\` SET ${setSql}${whereSql}`;
       params.push(...updateParams, ...this.whereParams);
 
-      await pool.query(sql, params);
+      // await pool.query(sql, params);
+      const [updateResult]: any = await pool.query(sql, params);
+
+console.log("UPDATE SQL:", sql);
+console.log("UPDATE PARAMS:", params);
+console.log("UPDATE RESULT:", updateResult);
 
       const selectSql = `SELECT * FROM \`${this.tableName}\`${whereSql}`;
       const [updatedRows]: any = await pool.query(selectSql, this.whereParams);

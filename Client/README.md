@@ -95,3 +95,36 @@ To learn more about React Native, take a look at the following resources:
 - [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
 - [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
 - [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+
+
+
+
+
+
+
+
+
+Steps taken to reduce the execution build time:
+
+1. creat if there are no files with the names babel.config.js and metro.config.js and .eslintrc.js
+2. add the rules to the .eslintrc.js file to disable the rules that cause issues with RN 0.85
+3. add the blocklist to the metro.config.js file to block the .cxx directory
+4. add the reanimated plugin to the babel.config.js file to enable the reanimated plugin
+
+
+1. Create babel.config.js
+module.exports = {
+  presets: ['module:@react-native/babel-preset'],
+  plugins: [
+    'react-native-reanimated/plugin',
+  ],
+};
+
+2. Modified metro.config.js and .eslintrc.js files
+
+Initially run the virtual device(Android studio emulator), by clicking cold Boot icon in the tool bar of Android studio.
+
+then go to the terminal and run the app by typing the following commands in the two terminals:
+
+1.  npx react-native start
+2.  npx react-native run-android

@@ -63,6 +63,9 @@ const envSchema = z.object({
   MAILGUN_API_KEY: z.string().optional(),
   MAILGUN_DOMAIN: z.string().optional(),
   MAILGUN_FROM_EMAIL: z.string().optional(),
+  // ZeptoMail credentials
+  ZEPTOMAIL_FROM_EMAIL: z.string().optional(),
+  ZEPTOMAIL_API_KEY: z.string().optional(),
 
   // SMS
   CLICKSEND_USERNAME: z.string().optional(),

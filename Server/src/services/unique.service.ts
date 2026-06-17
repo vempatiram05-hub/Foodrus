@@ -8,21 +8,22 @@ interface PaginatedResult<T> {
 
 export class UniqueService {
   /* CREATE (generic) */
-  async create<T = any>(
-    table: string,
-    payload: Partial<T>
-  ): Promise<T> {
+  async create(table: string, payload: any) {
+    console.log("CREATE TABLE:", table);
+    console.log("CREATE PAYLOAD:", payload);
+
     const { data, error } = await DBconnection
       .from(table)
-      .insert(payload)
-      .select()
-      .single();
+      .insert(payload);
+
+    console.log("CREATE RESULT:", data);
+    console.log("CREATE ERROR:", error);
 
     if (error) {
-      logger.error(`DB create failed on ${table}`, { error: error.message, code: error.code });
       throw error;
     }
-    return data as T;
+
+    return Array.isArray(data) ? data[0] : data;
   }
 
   /* GET ALL — hard cap of 1000 rows to prevent unbounded memory consumption */
@@ -91,12 +92,13 @@ export class UniqueService {
       ...payload,
       updated_at: new Date().toISOString(),
     };
+    console.log("ID:", id);
+    console.log("Payload:", updatePayload); ``
 
     const { data, error } = await DBconnection
       .from(table)
       .update(updatePayload)
-      .eq("id", id)
-      .select();
+      .eq("id", id);
 
     if (error) {
       logger.error(`DB update failed on ${table}`, { id, error: error.message, code: error.code });
@@ -118,16 +120,11 @@ export class UniqueService {
     const { data, error } = await DBconnection
       .from(table)
       .delete()
-      .eq("id", id)
-      .select();
+      .eq("id", id);
 
     if (error) {
       logger.error(`DB delete failed on ${table}`, { id, error: error.message, code: error.code });
       throw error;
-    }
-
-    if (!data || data.length === 0) {
-      throw new Error("Record not found");
     }
 
     return { message: "Deleted successfully" };
@@ -210,16 +207,16 @@ export class UniqueService {
 
 
   async getDataWithPagination<T = any>(
-  table: string,
-  limit = 10,
-  page = 1
-): Promise<{ data: T[]; total: number }> {
-  const query = this.buildBaseQuery(table, limit, page);
+    table: string,
+    limit = 10,
+    page = 1
+  ): Promise<{ data: T[]; total: number }> {
+    const query = this.buildBaseQuery(table, limit, page);
 
-  // ❌ Removed search logic completely
+    // ❌ Removed search logic completely
 
-  return this.executeQuery<T>(query, table);
-}
+    return this.executeQuery<T>(query, table);
+  }
   async getDataByFieldPaginated<T = any>(
     table: string,
     field: string,

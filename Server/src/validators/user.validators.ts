@@ -63,12 +63,12 @@ export const forgotPasswordSchema = z.object({
 });
 
 export const verifyForgotPasswordOtpSchema = z.object({
-  email: emailSchema,
+  emailOrPhone: emailOrPhoneSchema,
   otp: z.string().trim().min(4, "OTP is required").max(10),
 });
 
 export const updatePasswordSchema = z.object({
-  email: emailSchema,
+  emailOrPhone: emailOrPhoneSchema,
   otp: z.string().trim().min(1, "otp is required"),
   newPassword: z.string().min(8, "Password must be at least 8 characters").max(128).regex(passwordRegex, passwordMessage),
 });

@@ -6,6 +6,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
+import { BASE_URL } from '../config/apiConfig';
 
 // ─── THEME ───────────────────────────────────────
 const ORANGE = '#F97316';
@@ -44,14 +45,31 @@ export default function LoginScreen({ navigation }: any) {
       Alert.alert('Error', 'Please enter phone number and password.');
       return;
     }
+
     setLoading(true);
+
     try {
-      // 🔌 Replace with your API:
-      // const response = await loginAPI(phone, password);
-      // navigation.replace('MainTabs');
-      console.log('Login:', phone, password);
+      const response = await fetch(`${BASE_URL}/users/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          emailOrPhone: phone,
+          password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        Alert.alert('Success', data.message || 'Logged in successfully');
+        navigation.replace('MainTabs');
+      } else {
+        Alert.alert('Error', data.message || 'Login failed');
+      }
     } catch (e: any) {
-      Alert.alert('Error', e.message || 'Login failed.');
+      Alert.alert('Error', e.message || 'Network error');
     } finally {
       setLoading(false);
     }
@@ -138,12 +156,14 @@ export default function LoginScreen({ navigation }: any) {
           </View>
 
           {/* ── FORGOT PASSWORD ── */}
+          <View>
           <TouchableOpacity
             style={s.forgotBtn}
-            onPress={() => navigation?.navigate('ForgotPassword')}
+            onPress={() => navigation?.navigate('RequestOTP')}
           >
             <Text style={s.forgotText}>Forgot password?</Text>
           </TouchableOpacity>
+          </View>
 
           {/* ── LOGIN BUTTON ── */}
           <TouchableOpacity
