@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import {
   View,
@@ -6,11 +6,44 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
+  Alert,
   SafeAreaView,
 } from 'react-native';
+import { AuthContext } from '../context/AuthContext';
 
-const MenuRow = ({ icon, label, onPress }) => (
+// Decode a JWT payload (lightweight, no external deps)
+function parseJwt(token: string | null) {
+  if (!token) return null;
+  try {
+    const base64Url = token.split('.')[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    // prefer atob if available
+    if (typeof atob === 'function') {
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map(function (c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join('')
+      );
+      return JSON.parse(jsonPayload);
+    }
+
+    // fallback to Buffer (packagers often polyfill Buffer)
+    if (typeof global !== 'undefined' && (global as any).Buffer) {
+      const jsonPayload = (global as any).Buffer.from(base64, 'base64').toString('utf8');
+      return JSON.parse(jsonPayload);
+    }
+
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
+const MenuRow = ({ icon, label, onPress } : any) => (
   <TouchableOpacity style={styles.menuRow} onPress={onPress}>
     <Text style={styles.menuIcon}>{icon}</Text>
     <Text style={styles.menuLabel}>{label}</Text>
@@ -18,12 +51,51 @@ const MenuRow = ({ icon, label, onPress }) => (
   </TouchableOpacity>
 );
 
-const SectionTitle = ({ title }) => (
+const SectionTitle = ({ title }: any) => (
   <Text style={styles.sectionTitle}>{title}</Text>
 );
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
+  const { setToken } = useContext(AuthContext);
+  const { token } = useContext(AuthContext);
+
+  const [profileName, setProfileName] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Confirm Logout',
+      'Are you sure you want to log out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: () => {
+            // clear token from context
+            setToken(null);
+            // navigate to home screen
+            navigation.navigate('Home' as never);
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  useEffect(() => {
+    if (!token) {
+      setProfileName('');
+      setProfileEmail('');
+      return;
+    }
+
+    const payload: any = parseJwt(token) || {};
+    // server uses `full_name` and `email` in token payload
+    setProfileName(payload.full_name ?? payload.fullName ?? '');
+    setProfileEmail(payload.email ?? '');
+  }, [token]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -41,10 +113,10 @@ export default function ProfileScreen() {
             </View>
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>Jeevithram N K</Text>
-            <Text style={styles.profileEmail}>jeevithramm@gmail.com</Text>
+            <Text style={styles.profileName}>{profileName || 'My Name'}</Text>
+            <Text style={styles.profileEmail}>{profileEmail || ''}</Text>
           </View>
-          <TouchableOpacity style={styles.editButton}>
+          <TouchableOpacity style={styles.editButton} onPress={() => navigation.navigate('UpdateProfile' as never)}>
             <Text style={styles.editButtonText}>Edit Profile ✏️</Text>
           </TouchableOpacity>
         </View>
@@ -52,7 +124,7 @@ export default function ProfileScreen() {
         {/* Orders Section */}
         <SectionTitle title="Orders" />
         <MenuRow icon="🛍️" label="Orders" />
-        <MenuRow icon="♡" label="My Wishlist" />
+        <MenuRow icon="♡" label="My Wishlist" />   
 
         {/* Account Section */}
         <SectionTitle title="Account" />
@@ -75,7 +147,7 @@ export default function ProfileScreen() {
           onPress={() => navigation.navigate('About' as never)}
         />
         {/* Log Out */}
-        <TouchableOpacity style={styles.logoutButton}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutIcon}>↪</Text>
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>

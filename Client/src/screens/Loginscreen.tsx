@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, SafeAreaView, ScrollView,
@@ -7,6 +7,7 @@ import {
   Image,
 } from 'react-native';
 import { BASE_URL } from '../config/apiConfig';
+import { AuthContext } from '../context/AuthContext';
 
 // ─── THEME ───────────────────────────────────────
 const ORANGE = '#F97316';
@@ -39,6 +40,7 @@ export default function LoginScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { setToken } = useContext(AuthContext);
 
   const handleLogin = async () => {
     if (!phone || !password) {
@@ -63,6 +65,15 @@ export default function LoginScreen({ navigation }: any) {
       const data = await response.json();
 
       if (response.ok && data.success) {
+        const accessToken =
+          typeof data.token === 'string'
+            ? data.token
+            : data.token?.accessToken ?? null;
+
+        if (accessToken) {
+          setToken(accessToken);
+        }
+
         Alert.alert('Success', data.message || 'Logged in successfully');
         navigation.replace('MainTabs');
       } else {
@@ -124,16 +135,13 @@ export default function LoginScreen({ navigation }: any) {
           <View style={s.inputWrapper}>
             <TextInput
               style={s.input}
-              placeholder="Phone number*"
+              placeholder="Email or Phone Number*"
               placeholderTextColor={GREY}
               value={phone}
               onChangeText={setPhone}
-              keyboardType="phone-pad"
+              keyboardType="default"
               autoCapitalize="none"
             />
-            <TouchableOpacity style={s.eyeBtn}>
-              <Text style={s.eyeIcon}>👁</Text>
-            </TouchableOpacity>
           </View>
 
           {/* ── PASSWORD INPUT ── */}

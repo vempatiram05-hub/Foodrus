@@ -20,11 +20,12 @@
     "react": "19.2.3",
     "react-native": "0.85.3",
     "react-native-gesture-handler": "^2.31.2",
+    "react-native-mmkv": "^2.12.2",
     "react-native-reanimated": "^4.3.1",
     "react-native-safe-area-context": "^5.8.0",
     "react-native-screens": "^4.25.2",
     "react-native-vector-icons": "^10.3.0",
-    "react-native-worklets": "^0.8.3",
+    "react-native-worklets": "^0.9.2",
     "yup": "^1.7.1"
   },
   "devDependencies": {

@@ -1,5 +1,6 @@
 import React from 'react';
 import AppNavigator from './src/navigation/AppNavigator';
+import { AuthProvider } from './src/context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native';
 
@@ -12,7 +13,9 @@ const styles = StyleSheet.create({
 export default function App() {
   return (
     <SafeAreaView style={styles.safe}>
-      <AppNavigator />
+      <AuthProvider>
+        <AppNavigator />
+      </AuthProvider>
     </SafeAreaView>
   );
 }

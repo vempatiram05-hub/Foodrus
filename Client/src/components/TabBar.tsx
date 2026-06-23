@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { AuthContext } from '../context/AuthContext';
 
 const ORANGE = '#FC8019';
 
@@ -38,16 +39,21 @@ const TABS = [
 ];
 
  export default function TabBar({ state, navigation }: { state: { index: number }; navigation: { navigate: (routeName: string) => void } }) {
+  const { token } = useContext(AuthContext);
+
   return (
     <View style={styles.container}>
       {TABS.map((tab, index) => {
         const focused = state.index === index;
+        const isAuthTab = tab.name === 'Profile';
+        const label = isAuthTab && !token ? 'Login' : tab.label;
+        const targetRoute = isAuthTab && !token ? 'Login' : tab.name;
 
         return (
           <TouchableOpacity
             key={tab.name}
             style={styles.tab}
-            onPress={() => navigation.navigate(tab.name)}
+            onPress={() => navigation.navigate(targetRoute)}
           >
             <MaterialCommunityIcons
               name={focused ? tab.active : tab.inactive}
@@ -61,7 +67,7 @@ const TABS = [
                 { color: focused ? ORANGE : '#777' },
               ]}
             >
-              {tab.label}
+              {label}
             </Text>
           </TouchableOpacity>
         );

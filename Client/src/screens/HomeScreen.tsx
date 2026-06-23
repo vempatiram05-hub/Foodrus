@@ -145,12 +145,12 @@ const HomeScreen: React.FC = () => {
           </View>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={styles.headerBtn}
             onPress={() => navigation.navigate('Login' as never)}
           >
             <Text style={styles.loginText}>Log in</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           <TouchableOpacity style={styles.iconBtn}>
             <Text style={styles.iconTxt}>❤️</Text>
           </TouchableOpacity>
@@ -239,7 +239,7 @@ const HomeScreen: React.FC = () => {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={styles.promoScroll}
+          // style={styles.promoScroll}
         >
           {/* Banner 1 – dark */}
           <View style={styles.promoBannerContainers}>

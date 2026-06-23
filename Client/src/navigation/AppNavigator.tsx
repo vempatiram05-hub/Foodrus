@@ -9,6 +9,7 @@ import SearchScreen from '../screens/Searchscreen';
 import OTPVerifyScreen from '../screens/OTPVerifyScreen'
 import RequestOTPScreen from '../screens/RequestOTPScreen';
 import UpdatePasswordScreen from '../screens/UpdatePasswordScreen';
+import UpdateProfileScreen from '../screens/UpdateProfileScreen';
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
@@ -24,6 +25,7 @@ export default function AppNavigator() {
         <Stack.Screen name="VerifyOTP" component={OTPVerifyScreen} />
         <Stack.Screen name="RequestOTP" component={RequestOTPScreen} />
         <Stack.Screen name="UpdatePassword" component={UpdatePasswordScreen} />
+        <Stack.Screen name="UpdateProfile" component={UpdateProfileScreen} />
         {/* <Stack.Screen name="Success" component={SuccessScreen} /> */}
         {/* <Stack.Screen name="Signup" component={SignupScreen} /> */}
         {/* <Stack.Screen name="ReviewOrder" component={ReviewOrderScreen} /> */}
