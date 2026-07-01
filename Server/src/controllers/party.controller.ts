@@ -127,7 +127,7 @@ export class PartyController {
         updated_at: new Date().toISOString(),
       };
 
-      const created = await uniqueService.create<PartyRecord>(TABLE_NAME, insertData);
+      const created = await uniqueService.create(TABLE_NAME, insertData);
 
       return res.status(201).json({
         success: true,

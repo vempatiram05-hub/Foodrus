@@ -23,6 +23,7 @@ export interface JwtPayload {
   sub_admin_id?: string | null;
   store_admin_id?: string | null;
   store_id?: string | null;
+  images?: any;
 }
 
 export const generateToken = (user: JwtPayload): { accessToken: string; refreshToken: string } => {
@@ -42,7 +43,9 @@ export const generateToken = (user: JwtPayload): { accessToken: string; refreshT
     permissions: user.permissions ?? null,
     is_active: user.is_active,
     account_status: user.account_status,
-    token_version: user.token_version ?? 1
+    token_version: user.token_version ?? 1,
+    ...(user.images ? { images: user.images } : {})
+
   };
 
   // Only include hierarchy IDs if user is NOT Customer

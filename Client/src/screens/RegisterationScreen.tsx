@@ -17,7 +17,7 @@ const COUNTRY_CODES = [
 ];
 
 const RegisterationScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);
   const [countryModalVisible, setCountryModalVisible] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -38,9 +38,7 @@ const RegisterationScreen = () => {
     validateOnChange: true,
     validateOnBlur: true,
 
-    context: {
-      selectedCountry,
-    },
+
 
     onSubmit: async (vals) => {
       setLoading(true);
@@ -69,17 +67,23 @@ const RegisterationScreen = () => {
         if (response.ok && data.success) {
           Alert.alert('Success', data.message || 'Account created');
 
-          navigation?.navigate('VerifyOTP' as never, {
+          navigation.navigate('VerifyOTP', {
             email: vals.email,
             phone: fullPhone,
             source: 'Register',
           });
         } else {
+          let errorMessage = data.message || 'Registration failed';
+          if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+            errorMessage += '\n' + data.errors.map((e: any) => `- ${e.field}: ${e.message}`).join('\n');
+          }
           
           Alert.alert(
             'Error',
-            data.message || 'Registration failed'
+            errorMessage
+            
           );
+          console.log("data", data);
         }
       } catch (e: any) {
         Alert.alert(

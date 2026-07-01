@@ -8,8 +8,10 @@ import {
   TouchableOpacity,
   Alert,
   SafeAreaView,
+  Image,
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
+import { BASE_URL } from '../config/apiConfig';
 
 // Decode a JWT payload (lightweight, no external deps)
 function parseJwt(token: string | null) {
@@ -43,7 +45,7 @@ function parseJwt(token: string | null) {
   }
 }
 
-const MenuRow = ({ icon, label, onPress } : any) => (
+const MenuRow = ({ icon, label, onPress }: any) => (
   <TouchableOpacity style={styles.menuRow} onPress={onPress}>
     <Text style={styles.menuIcon}>{icon}</Text>
     <Text style={styles.menuLabel}>{label}</Text>
@@ -62,6 +64,7 @@ export default function ProfileScreen() {
 
   const [profileName, setProfileName] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
+  const [profileImage, setProfileImage] = useState<string | null>(null);
 
   const handleLogout = () => {
     Alert.alert(
@@ -88,6 +91,7 @@ export default function ProfileScreen() {
     if (!token) {
       setProfileName('');
       setProfileEmail('');
+      setProfileImage(null);
       return;
     }
 
@@ -95,6 +99,17 @@ export default function ProfileScreen() {
     // server uses `full_name` and `email` in token payload
     setProfileName(payload.full_name ?? payload.fullName ?? '');
     setProfileEmail(payload.email ?? '');
+    let userImages: any[] = [];
+    if (Array.isArray(payload.images)) {
+      userImages = payload.images;
+    } else if (typeof payload.images === 'string') {
+      try {
+        userImages = JSON.parse(payload.images);
+      } catch (e) {
+        userImages = [];
+      }
+    }
+    setProfileImage(userImages.length > 0 ? userImages[0] : null);
   }, [token]);
 
   return (
@@ -105,9 +120,18 @@ export default function ProfileScreen() {
         {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.avatarWrapper}>
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>JN</Text>
-            </View>
+            {profileImage ? (
+              <Image
+                source={{ uri: `${BASE_URL.replace('/api', '')}${profileImage}` }}
+                style={styles.avatarPlaceholder}
+              />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarText}>
+                  {profileName ? profileName.substring(0, 2).toUpperCase() : 'ME'}
+                </Text>
+              </View>
+            )}
             <View style={styles.cameraIcon}>
               <Text style={{ fontSize: 12 }}>📷</Text>
             </View>
@@ -117,18 +141,19 @@ export default function ProfileScreen() {
             <Text style={styles.profileEmail}>{profileEmail || ''}</Text>
           </View>
           <TouchableOpacity style={styles.editButton} onPress={() => navigation.navigate('UpdateProfile' as never)}>
-            <Text style={styles.editButtonText}>Edit Profile ✏️</Text>
+            <Text style={styles.editButtonText}>Update</Text>
           </TouchableOpacity>
         </View>
 
         {/* Orders Section */}
         <SectionTitle title="Orders" />
         <MenuRow icon="🛍️" label="Orders" />
-        <MenuRow icon="♡" label="My Wishlist" />   
+        <MenuRow icon="♡" label="My Wishlist" />
 
         {/* Account Section */}
         <SectionTitle title="Account" />
         <MenuRow icon="👤" label="My Details" />
+        <MenuRow icon="🔒" label="Change Password" onPress={() => navigation.navigate('UpdatePassword' as never)} />
         <MenuRow icon="📍" label="Delivery Address" />
         <MenuRow icon="💳" label="Payment Methods" />
         <MenuRow icon="🏷️" label="Promo Cord" />
@@ -191,10 +216,10 @@ const styles = StyleSheet.create({
   },
   profileInfo: { flex: 1 },
   profileName: { fontSize: 15, fontWeight: '700', color: '#111' },
-  profileEmail: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+  profileEmail: { fontSize: 10, color: '#6b7280', marginTop: 2 },
   editButton: {
-    borderWidth: 1.5, borderColor: ORANGE,
-    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
+    backgroundColor: '#FEF3E7',
+    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
   },
   editButtonText: { color: ORANGE, fontSize: 12, fontWeight: '600' },
 
@@ -216,7 +241,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     backgroundColor: '#FEF3E7',
     borderRadius: 12,
-    paddingVertical: 18,
+    paddingVertical: 12,
     marginTop: 24,
     gap: 10,
   },

@@ -23,6 +23,7 @@ export const RegisterSchema = Yup.object().shape({
 
   password: Yup.string()
     .min(8, 'Password must be at least 8 characters.')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/, 'Password must contain an uppercase letter, a lowercase letter, and a special character.')
     .required('Password is required.'),
 
   confirmPassword: Yup.string()

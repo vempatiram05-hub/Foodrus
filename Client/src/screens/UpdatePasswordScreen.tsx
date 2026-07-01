@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,31 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { BASE_URL } from '../config/apiConfig';
+import { AuthContext } from '../context/AuthContext';
+
+function parseJwt(token: string | null) {
+  if (!token) return null;
+  try {
+    const base64Url = token.split('.')[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    if (typeof atob === 'function') {
+      const jsonPayload = decodeURIComponent(
+        atob(base64).split('').map(function (c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join('')
+      );
+      return JSON.parse(jsonPayload);
+    }
+    if (typeof global !== 'undefined' && (global as any).Buffer) {
+      const jsonPayload = (global as any).Buffer.from(base64, 'base64').toString('utf8');
+      return JSON.parse(jsonPayload);
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
 
 const ORANGE = '#F97316';
 
@@ -21,11 +46,18 @@ const UpdatePasswordScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { email, otp } = route.params || {};
+  const { token } = useContext(AuthContext);
+  const isLoggedInMode = !email && !otp && !!token;
+  
+  const [currentPassword, setCurrentPassword] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [focusedField, setFocusedField] = useState<'password' | 'confirm' | null>(null);
+  
+  const [focusedField, setFocusedField] = useState<'current' | 'password' | 'confirm' | null>(null);
   const [loading, setLoading] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -55,6 +87,10 @@ const UpdatePasswordScreen = () => {
   const handleUpdatePassword = async () => {
     Keyboard.dismiss();
 
+    if (isLoggedInMode && !currentPassword.trim()) {
+      showToast('Please enter your current password');
+      return;
+    }
     if (!password.trim() || !confirmPassword.trim()) {
       showToast('Please fill in both fields');
       return;
@@ -67,33 +103,59 @@ const UpdatePasswordScreen = () => {
       showToast('Passwords do not match');
       return;
     }
-    if (!email || !otp) {
+    if (!isLoggedInMode && (!email || !otp)) {
       showToast('Missing email or OTP to update password');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch(`${BASE_URL}/users/update-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          emailOrPhone: email,
-          otp,
-          newPassword: password,
-        }),
-      });
+      let response;
+      if (isLoggedInMode) {
+        const payload: any = parseJwt(token);
+        if (!payload || !payload.id) {
+          showToast('Invalid session');
+          setLoading(false);
+          return;
+        }
+        response = await fetch(`${BASE_URL}/users/change-password/${payload.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            current_password: currentPassword,
+            new_password: password,
+          }),
+        });
+      } else {
+        response = await fetch(`${BASE_URL}/users/update-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            emailOrPhone: email,
+            otp,
+            newPassword: password,
+          }),
+        });
+      }
 
       const data = await response.json();
 
       if (response.ok && data.success) {
         showToast('Password updated successfully', true);
+        setCurrentPassword('');
         setPassword('');
         setConfirmPassword('');
         setTimeout(() => {
-          navigation.navigate('Login');
+          if (isLoggedInMode) {
+             if (navigation.canGoBack()) navigation.goBack();
+          } else {
+             navigation.navigate('Login');
+          }
         }, 1200);
       } else {
         showToast(data.message || 'Failed to update password');
@@ -120,10 +182,49 @@ const UpdatePasswordScreen = () => {
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>Update Password</Text>
+          <Text style={styles.title}>{isLoggedInMode ? 'Change Password' : 'Update Password'}</Text>
           <Text style={styles.subtitle}>
-            Your new password must be different from previously used passwords
+            {isLoggedInMode 
+              ? 'Enter your current password to set a new one'
+              : 'Your new password must be different from previously used passwords'
+            }
           </Text>
+
+          {/* Current Password Field (Only in logged-in mode) */}
+          {isLoggedInMode && (
+            <View style={styles.fieldWrapper}>
+              <Text style={styles.fieldLabel}>Current Password</Text>
+              <View
+                style={[
+                  styles.inputRow,
+                  focusedField === 'current'
+                    ? styles.inputRowFocused
+                    : styles.inputRowBlurred,
+                ]}
+              >
+                <TextInput
+                  style={styles.inputField}
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  onFocus={() => setFocusedField('current')}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder="Enter current password"
+                  placeholderTextColor="#a0a0a0"
+                  secureTextEntry={!showCurrentPassword}
+                  selectionColor={ORANGE}
+                  returnKeyType="next"
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                >
+                  <Text style={styles.eyeIcon}>
+                    {showCurrentPassword ? '👁️' : '👁️‍🗨️'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
           {/* Password Field */}
           <View style={styles.fieldWrapper}>

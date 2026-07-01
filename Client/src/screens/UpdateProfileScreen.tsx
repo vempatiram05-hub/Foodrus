@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,11 +14,46 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import ImagePicker from 'react-native-image-crop-picker';
+import { AuthContext } from '../context/AuthContext';
+import { BASE_URL } from '../config/apiConfig';
 
 const ORANGE = '#F97316';
 
+// Decode a JWT payload
+function parseJwt(token: string | null) {
+  if (!token) return null;
+  try {
+    const base64Url = token.split('.')[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    if (typeof atob === 'function') {
+      const jsonPayload = decodeURIComponent(
+        atob(base64).split('').map(function (c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join('')
+      );
+      return JSON.parse(jsonPayload);
+    }
+    if (typeof global !== 'undefined' && (global as any).Buffer) {
+      const jsonPayload = (global as any).Buffer.from(base64, 'base64').toString('utf8');
+      return JSON.parse(jsonPayload);
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
 const UpdateProfileScreen = () => {
+  const navigation = useNavigation<any>();
+  const { token, setToken } = useContext(AuthContext);
+  const [userId, setUserId] = useState<string | null>(null);
+
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<any>(null);
+
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -51,46 +86,119 @@ const UpdateProfileScreen = () => {
     ]).start(() => setToastVisible(false));
   };
 
-  const isValidEmail = (value: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  useEffect(() => {
+    if (token) {
+      const payload: any = parseJwt(token);
+      if (payload) {
+        setUserId(payload.id);
+        setFullName(payload.full_name || payload.fullName || '');
+        setEmail(payload.email || '');
+        setPhone(payload.phone || '');
+        let userImages: any[] = [];
+        if (Array.isArray(payload.images)) {
+          userImages = payload.images;
+        } else if (typeof payload.images === 'string') {
+          try {
+            userImages = JSON.parse(payload.images);
+          } catch (e) {
+            userImages = [];
+          }
+        }
+
+        if (userImages.length > 0 && userImages[0]) {
+          const img = userImages[0];
+          if (img.startsWith('/')) {
+            setPhotoUri(`${BASE_URL.replace('/api', '')}${img}`);
+          } else {
+            setPhotoUri(img);
+          }
+        }
+      }
+    }
+  }, [token]);
+
+  const handlePickPhoto = async () => {
+    Keyboard.dismiss();
+    try {
+      const image = await ImagePicker.openPicker({
+        width: 400,
+        height: 400,
+        cropping: true,
+        mediaType: 'photo',
+      });
+
+      setPhotoUri(image.path);
+      setPhotoFile({
+        uri: image.path,
+        type: image.mime,
+        name: image.path.split('/').pop() || 'profile.jpg',
+      });
+    } catch (error: any) {
+      if (error.message !== 'User cancelled image selection') {
+        showToast(error.message);
+      }
+    }
   };
 
-  // Hook this up to expo-image-picker or react-native-image-picker.
-  // Left as a placeholder so this file has no extra dependencies.
-  const handlePickPhoto = () => {
-    showToast('Connect an image picker library here', true);
-    // Example with expo-image-picker:
-    // const result = await ImagePicker.launchImageLibraryAsync({
-    //   mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    //   allowsEditing: true,
-    //   aspect: [1, 1],
-    //   quality: 0.8,
-    // });
-    // if (!result.canceled) setPhotoUri(result.assets[0].uri);
-  };
-
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     Keyboard.dismiss();
 
     if (!fullName.trim()) {
       showToast('Please enter your full name');
       return;
     }
-    if (!email.trim() || !isValidEmail(email.trim())) {
-      showToast('Please enter a valid email');
-      return;
-    }
-    if (!phone.trim() || phone.trim().length < 7) {
-      showToast('Please enter a valid phone number');
+
+    if (!userId) {
+      showToast('User information is missing');
       return;
     }
 
     setLoading(true);
-    // Simulate an update profile API call
-    setTimeout(() => {
+
+    try {
+      const formData = new FormData();
+      formData.append('full_name', fullName.trim());
+
+      if (photoFile && photoFile.uri) {
+        formData.append('images', {
+          uri: Platform.OS === 'ios' ? photoFile.uri.replace('file://', '') : photoFile.uri,
+          type: photoFile.type || 'image/jpeg',
+          name: photoFile.fileName || 'profile.jpg',
+        } as any);
+      }
+
+      const response = await fetch(`${BASE_URL}/users/profile/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+      console.log("UPDATE PROFILE RESPONSE DATA:", data);
+
+      if (response.ok && data.success) {
+        showToast('Profile updated successfully', true);
+        setTimeout(() => {
+          if (navigation.canGoBack()) {
+            navigation.goBack();
+          }
+        }, 2000);
+        if (data.token) {
+          console.log("SETTING NEW TOKEN:", data.token.substring(0, 20) + "...");
+          setToken(data.token);
+        } else {
+          console.log("WARNING: No token returned from backend API!");
+        }
+      } else {
+        showToast(data.message || 'Update failed');
+      }
+    } catch (e: any) {
+      showToast(e.message || 'Network error');
+    } finally {
       setLoading(false);
-      showToast('Profile updated successfully', true);
-    }, 1200);
+    }
   };
 
   return (
@@ -159,23 +267,11 @@ const UpdateProfileScreen = () => {
           <View style={styles.fieldWrapper}>
             <Text style={styles.fieldLabel}>Email Address</Text>
             <TextInput
-              style={[
-                styles.inputField,
-                focusedField === 'email'
-                  ? styles.inputFieldFocused
-                  : styles.inputFieldBlurred,
-              ]}
+              style={[styles.inputField, styles.inputFieldReadOnly]}
               value={email}
-              onChangeText={setEmail}
-              onFocus={() => setFocusedField('email')}
-              onBlur={() => setFocusedField(null)}
+              editable={false}
               placeholder="you@example.com"
               placeholderTextColor="#a0a0a0"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              selectionColor={ORANGE}
-              returnKeyType="next"
               accessibilityLabel="Email address"
             />
           </View>
@@ -184,52 +280,44 @@ const UpdateProfileScreen = () => {
           <View style={styles.fieldWrapper}>
             <Text style={styles.fieldLabel}>Phone Number</Text>
             <TextInput
-              style={[
-                styles.inputField,
-                focusedField === 'phone'
-                  ? styles.inputFieldFocused
-                  : styles.inputFieldBlurred,
-              ]}
+              style={[styles.inputField, styles.inputFieldReadOnly]}
               value={phone}
-              onChangeText={setPhone}
-              onFocus={() => setFocusedField('phone')}
-              onBlur={() => setFocusedField(null)}
+              editable={false}
               placeholder="Enter your phone number"
               placeholderTextColor="#a0a0a0"
-              keyboardType="phone-pad"
-              selectionColor={ORANGE}
-              returnKeyType="done"
               accessibilityLabel="Phone number"
             />
           </View>
 
-          {/* Update Button */}
-          <TouchableOpacity
-            style={[styles.updateButton, loading && styles.updateButtonLoading]}
-            onPress={handleUpdate}
-            activeOpacity={0.85}
-            disabled={loading}
-          >
-            <Text style={styles.updateButtonText}>
-              {loading ? 'Updating...' : 'Update'}
-            </Text>
-          </TouchableOpacity>
+          {/* Update Button & Inline Toast */}
+          <View style={{ width: '100%', marginTop: 12 }}>
+            <TouchableOpacity
+              style={[styles.updateButton, loading && styles.updateButtonLoading, { marginTop: 0 }]}
+              onPress={handleUpdate}
+              activeOpacity={0.85}
+              disabled={loading}
+            >
+              <Text style={styles.updateButtonText}>
+                {loading ? 'Updating...' : 'Update'}
+              </Text>
+            </TouchableOpacity>
+
+            {toastVisible && (
+              <Animated.View
+                style={[
+                  styles.updateButton,
+                  toastSuccess ? styles.toastSuccess : styles.toastError,
+                  { position: 'absolute', top: 0, left: 0, right: 0, opacity: toastOpacity, marginTop: 0 },
+                ]}
+              >
+                <Text style={styles.toastText}>{toastMessage}</Text>
+              </Animated.View>
+            )}
+          </View>
 
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Toast Notification */}
-      {toastVisible && (
-        <Animated.View
-          style={[
-            styles.toast,
-            toastSuccess ? styles.toastSuccess : styles.toastError,
-            { opacity: toastOpacity },
-          ]}
-        >
-          <Text style={styles.toastText}>{toastMessage}</Text>
-        </Animated.View>
-      )}
     </SafeAreaView>
   );
 };
@@ -346,6 +434,11 @@ const styles = StyleSheet.create({
   inputFieldFocused: {
     borderColor: ORANGE,
   },
+  inputFieldReadOnly: {
+    backgroundColor: '#f5f5f5',
+    color: '#6b6b6b',
+    borderColor: '#e0e0e0',
+  },
 
   // Update Button
   updateButton: {
@@ -373,16 +466,7 @@ const styles = StyleSheet.create({
   },
 
   // Toast
-  toast: {
-    position: 'absolute',
-    bottom: 40,
-    left: 28,
-    right: 28,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
+
   toastSuccess: {
     backgroundColor: ORANGE,
   },
@@ -390,7 +474,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e53935',
   },
   toastText: {
-    color: '#ffffff',
+    color: '#fff',
     fontSize: 13,
     fontWeight: '500',
   },

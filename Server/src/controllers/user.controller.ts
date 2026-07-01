@@ -19,6 +19,19 @@ const uniqueService = new UniqueService();
 const TABLE = "users";
 const OTP_TABLE = "user_otps";
 
+const parseImagesArray = (images: any): string[] => {
+  if (Array.isArray(images)) return images;
+  if (typeof images === 'string') {
+    try {
+      const parsed = JSON.parse(images);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 //----------------- OTP HELPERS ----------------
 
 export async function createUserOtp(
@@ -697,6 +710,7 @@ export const login = async (req: Request, res: Response) => {
       sub_admin_id: user.sub_admin_id ?? "",
       store_admin_id: user.store_admin_id ?? "",
       store_id: user.store_id ?? null,
+      ...(user.images ? { images: user.images } : {}),
     };
 
     const token = generateToken(tokenPayload);
@@ -895,6 +909,7 @@ export const verifyLoginOtp = async (req: Request, res: Response) => {
       sub_admin_id: user.sub_admin_id ?? "",
       store_admin_id: user.store_admin_id ?? "",
       store_id: user.store_id ?? null,
+      ...(user.images ? { images: user.images } : {}),
     };
 
     const token = generateToken(tokenPayload);
@@ -1476,7 +1491,7 @@ export const updateUser = async (req: Request, res: Response) => {
     const permissions = req.body.permissions !== undefined
       ? (typeof req.body.permissions === "string" ? JSON.parse(req.body.permissions) : req.body.permissions)
       : existingUser.permissions ?? {};
-    let images: string[] = existingUser.images ?? [];
+    let images: string[] = parseImagesArray(existingUser.images);
 
     // Handle uploaded files safely
     const files = Array.isArray(req.files) ? req.files : [];
@@ -1485,7 +1500,7 @@ export const updateUser = async (req: Request, res: Response) => {
 
     const lastTimestampRef = { value: 0 };
     if (files?.length) {
-      existingUser.images?.forEach(deleteFile);
+      images.forEach(deleteFile);
       images = [];
       for (const file of files) {
         const filename = generateImageName(existingUser.full_name, file.originalname, lastTimestampRef);
@@ -1542,7 +1557,7 @@ export const deleteUser = async (req: Request, res: Response) => {
     }
 
     // 2️⃣ Delete user images
-    existingUser.images?.forEach(deleteFile);
+    parseImagesArray(existingUser.images).forEach(deleteFile);
 
     // 3️⃣ Delete user row
     await uniqueService.deleteData(TABLE, userId);
@@ -1609,19 +1624,28 @@ export const updateOwnProfile = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const existingUser = await uniqueService.getDataById<User>(caller.id, TABLE);
+    const targetUserId = req.params.id || caller.id;
+
+    if (caller.id !== targetUserId) {
+      const allowedAdminRoles = ["Admin", "SuperAdmin", "SubAdmin", "StoreAdmin"];
+      if (!allowedAdminRoles.includes(caller.role_name)) {
+        return res.status(403).json({ success: false, message: "You can only update your own profile" });
+      }
+    }
+
+    const existingUser = await uniqueService.getDataById<User>(targetUserId, TABLE);
     if (!existingUser) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    let images: string[] = existingUser.images ?? [];
+    let images: string[] = parseImagesArray(existingUser.images);
     const files = Array.isArray(req.files) ? req.files : [];
     const uploadDir = path.join(process.cwd(), "src", "uploads", "users");
     if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
     const lastTimestampRef = { value: 0 };
     if (files.length) {
-      existingUser.images?.forEach(deleteFile);
+      images.forEach(deleteFile);
       images = [];
       for (const file of files) {
         const filename = generateImageName(existingUser.full_name, file.originalname, lastTimestampRef);
@@ -1645,8 +1669,35 @@ export const updateOwnProfile = async (req: Request, res: Response) => {
     if (full_name !== undefined) updatePayload.full_name = full_name;
     if (phone !== undefined) updatePayload.phone = phone || null;
 
-    const updatedUser = await uniqueService.updateById<User>(TABLE, caller.id, updatePayload);
-    return res.json({ success: true, message: "Profile updated successfully", user: sanitizeUser(updatedUser) });
+    const updatedUser = await uniqueService.updateById<User>(TABLE, targetUserId, updatePayload);
+
+    // generate a new token
+    const tokenPayload = {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      full_name: updatedUser.full_name,
+      role_name: updatedUser.role_name,
+      phone: updatedUser.phone ?? "",
+
+      permissions: mergeWithDefaults(updatedUser.role_name, updatedUser.permissions ?? {}),
+      is_active: updatedUser.is_active,
+      account_status: updatedUser.account_status,
+      token_version: updatedUser.token_version ?? 1,
+      admin_id: updatedUser.admin_id ?? "",
+      superadmin_id: updatedUser.superadmin_id ?? "",
+      sub_admin_id: updatedUser.sub_admin_id ?? "",
+      store_admin_id: updatedUser.store_admin_id ?? "",
+      store_id: updatedUser.store_id ?? null,
+      ...(updatedUser.images ? { images: updatedUser.images } : {}),
+    };
+    const newToken = generateToken(tokenPayload);
+
+    return res.json({ 
+      success: true, 
+      message: "Profile updated successfully", 
+      user: sanitizeUser(updatedUser),
+      token: newToken.accessToken
+    });
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message });
   }
