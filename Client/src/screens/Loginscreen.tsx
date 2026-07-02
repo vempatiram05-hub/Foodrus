@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, SafeAreaView, ScrollView,
@@ -6,9 +6,9 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import { BASE_URL } from '../config/apiConfig';
+import { BASE_URL, GOOGLE_WEB_CLIENT_ID } from '../config/apiConfig';
 import { AuthContext } from '../context/AuthContext';
-
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 // ─── THEME ───────────────────────────────────────
 const ORANGE = '#F97316';
 const BLACK = '#1a1a1a';
@@ -41,6 +41,55 @@ export default function LoginScreen({ navigation }: any) {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const { setToken } = useContext(AuthContext);
+
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: GOOGLE_WEB_CLIENT_ID,
+    });
+  }, []);
+
+  const signInWithGoogle = async () => {
+    setLoading(true);
+    try {
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+      const idToken = response.data?.idToken;
+
+      if (idToken) {
+        // Send idToken to your backend
+        const serverRes = await fetch(`${BASE_URL}/users/google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken }),
+        });
+        
+        const data = await serverRes.json();
+        
+        if (serverRes.ok && data.success) {
+          const accessToken = typeof data.token === 'string' ? data.token : data.token?.accessToken ?? null;
+          if (accessToken) setToken(accessToken);
+          Alert.alert('Success', data.message || 'Logged in with Google');
+          navigation.replace('MainTabs');
+        } else {
+          Alert.alert('Error', data.message || 'Google login failed on server');
+        }
+      } else {
+        Alert.alert('Error', 'Google sign-in returned no ID token');
+      }
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        // user cancelled the login flow
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        // operation (e.g. sign in) is in progress already
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert('Error', 'Play services not available or outdated');
+      } else {
+        Alert.alert('Error', error.message || 'Something went wrong with Google Sign-In');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (!phone || !password) {
@@ -121,8 +170,9 @@ export default function LoginScreen({ navigation }: any) {
           {/* ── GOOGLE BUTTON ── */}
           <TouchableOpacity
             style={s.socialBtn}
-            onPress={() => Alert.alert('Google Login', 'Coming soon!')}
+            onPress={signInWithGoogle}
             activeOpacity={0.8}
+            disabled={loading}
           >
             <GoogleIcon />
             <Text style={s.socialBtnText}>Login with Google</Text>

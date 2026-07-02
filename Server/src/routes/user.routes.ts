@@ -26,6 +26,7 @@ import {
   resendOtp,
   getMyMenu,
   getUserStats,
+  googleLogin,
 } from "../controllers/user.controller";
 import { authMiddleware, optionalAuthMiddlewares, requireRole, requirePermission } from "../middleware/auth";
 import { memoryUploader } from "../middleware/upload";
@@ -51,6 +52,7 @@ const UserRouter = Router();
 UserRouter.post("/register", optionalAuthMiddlewares,memoryUploader.array("images", 5),validate(registerSchema),register);
 
 UserRouter.post("/login", validate(loginSchema), login);
+UserRouter.post("/google", googleLogin);
 UserRouter.post("/send-login-otp", validate(sendLoginOtpSchema), sendLoginOtp);
 UserRouter.post("/verify-login-otp", validate(verifyLoginOtpSchema), verifyLoginOtp);
 UserRouter.post("/refresh-token", refreshTokenController);

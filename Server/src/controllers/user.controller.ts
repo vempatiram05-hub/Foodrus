@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { OAuth2Client } from "google-auth-library";
 import fs from "node:fs";
 import path from "node:path";
 import { UniqueService } from "../services/unique.service";
@@ -1161,6 +1162,98 @@ export const resendOtp = async (req: Request, res: Response) => {
   }
 };
 
+
+// ---------------- GOOGLE LOGIN ----------------
+export const googleLogin = async (req: Request, res: Response) => {
+  try {
+    const { idToken } = req.body;
+    if (!idToken) {
+      return res.status(400).json({ success: false, message: "ID token is required" });
+    }
+
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    if (!payload) {
+      return res.status(401).json({ success: false, message: "Invalid Google token" });
+    }
+
+    const email = payload.email?.toLowerCase();
+    if (!email) {
+      return res.status(400).json({ success: false, message: "No email found in Google token" });
+    }
+
+    // Check if user exists
+    let userRecords = await uniqueService.getDataByField(TABLE, "email", email);
+    let user = userRecords.length > 0 ? userRecords[0] : null;
+
+    if (!user) {
+      // Create a new Customer user
+      const full_name = payload.name || "Google User";
+      const randomPassword = await argon2.hash(Math.random().toString(36).slice(-10));
+
+      const permissions = mergeWithDefaults("Customer", DEFAULT_PERMISSIONS["Customer"]);
+
+      const insertData = {
+        email,
+        full_name,
+        role_name: "Customer",
+        password: randomPassword,
+        permissions: JSON.stringify(permissions),
+        account_status: "active",
+        is_active: true,
+      };
+
+      const newUser = await uniqueService.create(TABLE, insertData);
+
+      // Fetch the newly created user
+      userRecords = await uniqueService.getDataByField(TABLE, "email", email);
+      user = userRecords[0];
+    }
+
+    if (user.account_status !== "active") {
+      return res.status(403).json({ success: false, message: "Account is not active" });
+    }
+
+    // Generate tokens
+    const jwtPayload: JwtPayload = {
+      id: user.id,
+      email: user.email,
+      phone: user.phone || null,
+      full_name: user.full_name,
+      role_name: user.role_name,
+      account_status: user.account_status,
+      is_active: user.is_active,
+    };
+
+    const tokens = generateToken(jwtPayload);
+
+    // Remove password and unwanted fields
+    const { password: _password, otp, otp_expires_at, ...rest } = user;
+    const sanitizedUser = {
+      ...rest,
+      images: mapImages(user.images),
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      data: sanitizedUser,
+      token: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    });
+  } catch (err: any) {
+    logger.error(`Google Login Error: ${err.message}`);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Failed to authenticate with Google",
+    });
+  }
+};
+
 // ---------------- UPDATE PASSWORD ----------------
 export const updatePasswordController = async (req: Request, res: Response) => {
   try {
@@ -1692,9 +1785,9 @@ export const updateOwnProfile = async (req: Request, res: Response) => {
     };
     const newToken = generateToken(tokenPayload);
 
-    return res.json({ 
-      success: true, 
-      message: "Profile updated successfully", 
+    return res.json({
+      success: true,
+      message: "Profile updated successfully",
       user: sanitizeUser(updatedUser),
       token: newToken.accessToken
     });
