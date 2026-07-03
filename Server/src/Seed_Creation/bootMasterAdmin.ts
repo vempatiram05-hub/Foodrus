@@ -64,11 +64,10 @@ export async function bootMasterAdmin(): Promise<string | null> {
         full_name: "Admin",
         is_active: true,
         permissions,
-      })
-      .select("id");
+      });
 
     if (error) throw error;
-    const adminId = data[0].id;
+    const adminId = data.id;
     logger.info("Admin user created successfully");
     return adminId;
 

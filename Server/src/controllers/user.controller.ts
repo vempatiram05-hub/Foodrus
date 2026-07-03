@@ -136,8 +136,15 @@ const UPLOAD_DIR = path.join(process.cwd(), "src/uploads/users");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 // ---------------- HELPERS ----------------
-const mapImages = (images?: string[]) =>
-  Array.isArray(images) ? images.map(generateLocalSignedUrl) : [];
+const mapImages = (images?: any) => {
+  let parsed = images;
+  if (typeof images === "string") {
+    try { parsed = JSON.parse(images); } catch(e) {}
+  }
+  return Array.isArray(parsed)
+    ? parsed.map((img: string) => (img.startsWith("http") ? img : generateLocalSignedUrl(img)))
+    : [];
+};
 
 const saveFiles = (files: Express.Multer.File[], name: string): string[] => {
   const lastTimestampRef = { value: 0 };
@@ -1205,6 +1212,7 @@ export const googleLogin = async (req: Request, res: Response) => {
         permissions: JSON.stringify(permissions),
         account_status: "active",
         is_active: true,
+        images: payload.picture ? JSON.stringify([payload.picture]) : "[]",
       };
 
       const newUser = await uniqueService.create(TABLE, insertData);
@@ -1218,32 +1226,39 @@ export const googleLogin = async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, message: "Account is not active" });
     }
 
-    // Generate tokens
-    const jwtPayload: JwtPayload = {
+    // Generate tokens matching normal login payload exactly
+    const tokenPayload: JwtPayload = {
       id: user.id,
       email: user.email,
-      phone: user.phone || null,
       full_name: user.full_name,
       role_name: user.role_name,
-      account_status: user.account_status,
+      phone: user.phone ?? "",
+      permissions: mergeWithDefaults(user.role_name, user.permissions ?? {}),
       is_active: user.is_active,
+      account_status: user.account_status,
+      token_version: user.token_version ?? 1,
+      admin_id: user.admin_id ?? "",
+      superadmin_id: user.superadmin_id ?? "",
+      sub_admin_id: user.sub_admin_id ?? "",
+      store_admin_id: user.store_admin_id ?? "",
+      store_id: user.store_id ?? null,
+      ...(user.images ? { images: user.images } : {}),
     };
+    
+    console.log("=== GOOGLE LOGIN DEBUG ===");
+    console.log("Raw user.images from DB:", user.images);
+    console.log("Parsed/Mapped images in tokenPayload:", tokenPayload.images);
+    console.log("Full tokenPayload:", tokenPayload);
+    console.log("==========================");
 
-    const tokens = generateToken(jwtPayload);
+    const token = generateToken(tokenPayload);
 
-    // Remove password and unwanted fields
-    const { password: _password, otp, otp_expires_at, ...rest } = user;
-    const sanitizedUser = {
-      ...rest,
-      images: mapImages(user.images),
-    };
-
+    // If the frontend also expects a response body, we can return sanitizeUser
+    // However, typical normal login just returns { token }
     return res.status(200).json({
       success: true,
       message: "Login successful",
-      data: sanitizedUser,
-      token: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
+      token,
     });
   } catch (err: any) {
     logger.error(`Google Login Error: ${err.message}`);

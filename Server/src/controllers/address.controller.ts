@@ -4,6 +4,7 @@ import { UniqueController } from "./unique.controller";
 import { getQueryNumber, getQueryString } from "../utils/queryParser";
 import { logger } from "../utils/logger";
 import type { JwtPayload } from "../utils/token";
+import { initializePool } from "../config/DBConnect";
 
 const uniqueService = new UniqueService();
 const TABLE_NAME = "addresses";
@@ -21,7 +22,7 @@ export class AddressController {
         "user_id",
         "line1",
         "line2",
-        "city_id",
+        "city",
         "state_id",
         "country_id",
         "postal_code",
@@ -173,11 +174,15 @@ export class AddressController {
         });
       }
 
-      const addresses = await uniqueService.getDataByField(
-        TABLE_NAME,
-        "user_id",
-        user_id
-      );
+      const pool = initializePool();
+      const [addresses]: any = await pool.query(`
+        SELECT a.*, c.name as country_name, s.name as state_name
+        FROM addresses a
+        LEFT JOIN country c ON a.country_id = c.id
+        LEFT JOIN state s ON a.state_id = s.id
+        WHERE a.user_id = ?
+        ORDER BY a.created_at DESC
+      `, [user_id]);
 
       return res.json({
         success: true,
@@ -227,6 +232,7 @@ export class AddressController {
         "user_id",
         "line1",
         "line2",
+        "city",
         "state_id",
         "country_id",
         "postal_code",

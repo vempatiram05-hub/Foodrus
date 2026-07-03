@@ -122,7 +122,11 @@ export default function ProfileScreen() {
           <View style={styles.avatarWrapper}>
             {profileImage ? (
               <Image
-                source={{ uri: `${BASE_URL.replace('/api', '')}${profileImage}` }}
+                source={{
+                  uri: profileImage.startsWith('http')
+                    ? profileImage
+                    : `${BASE_URL.replace('/api', '')}${profileImage}`,
+                }}
                 style={styles.avatarPlaceholder}
               />
             ) : (
@@ -154,7 +158,7 @@ export default function ProfileScreen() {
         <SectionTitle title="Account" />
         <MenuRow icon="👤" label="My Details" />
         <MenuRow icon="🔒" label="Change Password" onPress={() => navigation.navigate('UpdatePassword' as never)} />
-        <MenuRow icon="📍" label="Delivery Address" />
+        <MenuRow icon="📍" label="Delivery Address" onPress={() => navigation.navigate('SavedAddressesScreen' as never)} />
         <MenuRow icon="💳" label="Payment Methods" />
         <MenuRow icon="🏷️" label="Promo Cord" />
 

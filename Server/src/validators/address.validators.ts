@@ -4,7 +4,7 @@ export const createAddressSchema = z.object({
   user_id: z.string().uuid("user_id must be a valid UUID"),
   line1: z.string().trim().min(1, "line1 is required").max(255),
   line2: z.string().trim().max(255).optional(),
-  city_id: z.string().trim().max(255).optional(),
+  city: z.string().trim().min(1, "city is required").max(255),
   state_id: z.string().trim().max(255).optional(),
   country_id: z.string().trim().max(255).optional(),
   postal_code: z.string().trim().max(20).optional(),

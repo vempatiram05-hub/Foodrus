@@ -159,7 +159,7 @@ CREATE TABLE IF NOT EXISTS addresses (
   postal_code VARCHAR(255),
   country_id  VARCHAR(255),
   state_id    VARCHAR(255),
-  city_id     VARCHAR(255),
+  city        TEXT NOT NULL,
   latitude    DECIMAL(10,8),
   longitude   DECIMAL(11,8),
   is_default  TINYINT(1) DEFAULT 0,

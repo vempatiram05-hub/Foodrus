@@ -1,5 +1,7 @@
 # 🍽️ HiFoode – Backend API Documentation
 
+ ## run - "npm run dev"
+
 ## 📌 Overview
 
 HiFoode is a scalable, role-based food delivery platform backend that powers users, vendors, delivery partners, and administrators. This backend exposes secure REST APIs for authentication, catalog management, cart & orders, payments, delivery logistics, notifications, and subscriptions.

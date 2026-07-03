@@ -56,7 +56,7 @@ const mockAddress = {
   line1: "Street 1",
   line2: "Area",
   postal_code: "500001",
-  city_id: "222e8400-e29b-41d4-a716-446655440222",
+  city: "Test City",
   created_at: new Date().toISOString(),
 };
 
@@ -77,7 +77,7 @@ describe("Address Routes", () => {
 
     const res = await request(app)
       .post("/api/addresses/createAddress")
-      .send({ line1: "Street 1", user_id: mockAddress.user_id, city_id: mockAddress.city_id });
+      .send({ line1: "Street 1", user_id: mockAddress.user_id, city: mockAddress.city });
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);

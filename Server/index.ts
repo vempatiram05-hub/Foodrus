@@ -1,7 +1,9 @@
 import "./src/config/env"; // Validates all required env vars at startup — exits if any are missing
 import app from "./app";
 import { DBconnection } from "./src/config/DBConnect";
-import { bootMasterAdmin } from "./src/Role_Admin_Creation/bootMasterAdmin";
+import { bootMasterAdmin } from "./src/Seed_Creation/bootMasterAdmin";
+import { bootCountry } from "./src/Seed_Creation/bootCountry";
+import { bootState } from "./src/Seed_Creation/bootState"
 import { runMigrations } from "./migrations/runMigrations";
 import { initDB } from "./src/config/initDB";
 import { logger } from "./src/utils/logger";
@@ -35,6 +37,10 @@ async function startServer() {
     logger.info("Database connected successfully");
     await runMigrations();
     await bootMasterAdmin();
+    const countryId = await bootCountry();
+    if (countryId) {
+      await bootState(countryId);
+    }
 
     const server = app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`, { port: PORT, env: process.env.NODE_ENV });

@@ -10,6 +10,8 @@ import OTPVerifyScreen from '../screens/OTPVerifyScreen'
 import RequestOTPScreen from '../screens/RequestOTPScreen';
 import UpdatePasswordScreen from '../screens/UpdatePasswordScreen';
 import UpdateProfileScreen from '../screens/UpdateProfileScreen';
+import CreateAddressScreen from '../screens/CreateAddressScreen'
+import SavedAddressesScreen from '../screens/SavedAddressesScreen'
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
@@ -26,16 +28,8 @@ export default function AppNavigator() {
         <Stack.Screen name="RequestOTP" component={RequestOTPScreen} />
         <Stack.Screen name="UpdatePassword" component={UpdatePasswordScreen} />
         <Stack.Screen name="UpdateProfile" component={UpdateProfileScreen} />
-        {/* <Stack.Screen name="Success" component={SuccessScreen} /> */}
-        {/* <Stack.Screen name="Signup" component={SignupScreen} /> */}
-        {/* <Stack.Screen name="ReviewOrder" component={ReviewOrderScreen} /> */}
-        {/* <Stack.Screen name="PaymentMethod" component={PaymentMethodScreen} /> */}
-        {/* <Stack.Screen name="SelectAddress" component={SelectAddressScreen} /> */}
-
-
-
-
-
+        <Stack.Screen name="CreateAddressScreen" component={CreateAddressScreen} />
+        <Stack.Screen name="SavedAddressesScreen" component={SavedAddressesScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
