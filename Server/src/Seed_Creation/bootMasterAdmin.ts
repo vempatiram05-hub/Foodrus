@@ -64,7 +64,7 @@ export async function bootMasterAdmin(): Promise<string | null> {
         full_name: "Admin",
         is_active: true,
         permissions,
-      });
+      }) as any;
 
     if (error) throw error;
     const adminId = data.id;

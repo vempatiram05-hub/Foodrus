@@ -38,13 +38,13 @@ const TABS = [
   },
 ];
 
- export default function TabBar({ state, navigation }: { state: { index: number }; navigation: { navigate: (routeName: string) => void } }) {
+export default function TabBar({ state, navigation }: any) {
   const { token } = useContext(AuthContext);
 
   return (
     <View style={styles.container}>
-      {TABS.map((tab, index) => {
-        const focused = state.index === index;
+      {TABS.map((tab) => {
+        const focused = state.routes[state.index].name === tab.name;
         const isAuthTab = tab.name === 'Profile';
         const label = isAuthTab && !token ? 'Login' : tab.label;
         const targetRoute = isAuthTab && !token ? 'Login' : tab.name;

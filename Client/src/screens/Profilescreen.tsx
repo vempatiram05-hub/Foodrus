@@ -156,9 +156,9 @@ export default function ProfileScreen() {
 
         {/* Account Section */}
         <SectionTitle title="Account" />
-        <MenuRow icon="👤" label="My Details" />
+        <MenuRow icon="👤" label="My Details" onPress={() => navigation.navigate('MyDetails' as never)} />
         <MenuRow icon="🔒" label="Change Password" onPress={() => navigation.navigate('UpdatePassword' as never)} />
-        <MenuRow icon="📍" label="Delivery Address" onPress={() => navigation.navigate('SavedAddressesScreen' as never)} />
+        <MenuRow icon="📍" label="Saved Address" onPress={() => navigation.navigate('SavedAddressesScreen' as never)} />
         <MenuRow icon="💳" label="Payment Methods" />
         <MenuRow icon="🏷️" label="Promo Cord" />
 

@@ -8,7 +8,7 @@ interface StateIdRow { id: string }
 export async function bootState(countryId: string): Promise<string | null> {
   try {
     logger.info("Checking State ...");
-    const stateName = process.env.STATE_NAME;
+    const stateName = process.env.STATE_NAME!;
 
     const { data: existingState, error: stateCheckError } = await DBconnection
       .from("state")
@@ -29,7 +29,7 @@ export async function bootState(countryId: string): Promise<string | null> {
       .insert({
         name: stateName,
         country_id: countryId
-      });
+      }) as any;
 
     if (error) throw error;
     const newStateId = data.id;

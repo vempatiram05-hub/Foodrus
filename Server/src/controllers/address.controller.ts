@@ -45,6 +45,15 @@ export class AddressController {
       }
       payload.updated_at = new Date().toISOString();
 
+      if (payload.is_default === true && payload.user_id) {
+        const pool = initializePool();
+        await pool.query(`
+          UPDATE addresses 
+          SET is_default = 0 
+          WHERE user_id = ?
+        `, [payload.user_id]);
+      }
+
       const created = await uniqueService.create(TABLE_NAME, payload);
 
       return res.status(201).json({
@@ -110,8 +119,47 @@ export class AddressController {
     }
   }
 
-  /* GET BY ID (delegate to UniqueController) */
-  static readonly getById: typeof uniqueAddressController.getById = (...args) => uniqueAddressController.getById(...args);
+  /* GET BY ID WITH COUNTRY AND STATE NAMES */
+  static async getById(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      if (!id || typeof id !== 'string' || !/^[0-9a-fA-F-]{36}$/.test(id)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid or missing address id."
+        });
+      }
+
+      const pool = initializePool();
+      const [rows]: any = await pool.query(`
+        SELECT a.*, c.name as country_name, s.name as state_name
+        FROM addresses a
+        LEFT JOIN country c ON a.country_id = c.id
+        LEFT JOIN state s ON a.state_id = s.id
+        WHERE a.id = ?
+      `, [id]);
+
+      const address = rows[0];
+      if (!address) {
+        return res.status(404).json({
+          success: false,
+          message: "Address not found"
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Address fetched successfully",
+        data: address
+      });
+    } catch (err: any) {
+      logger.error("AddressController.getById error:", err);
+      return res.status(500).json({
+        success: false,
+        message: err?.message || "Failed to fetch address",
+      });
+    }
+  }
 
   /* DELETE BY ID — with ownership check */
   static async delete(req: Request, res: Response) {
@@ -248,6 +296,23 @@ export class AddressController {
         }
       }
       payload.updated_at = new Date().toISOString();
+
+      if (payload.is_default === true) {
+        const pool = initializePool();
+        let userId = payload.user_id;
+        if (!userId) {
+          const rows = await uniqueService.getDataById(id, TABLE_NAME);
+          const address = Array.isArray(rows) ? rows[0] : rows;
+          userId = address?.user_id;
+        }
+        if (userId) {
+          await pool.query(`
+            UPDATE addresses 
+            SET is_default = 0 
+            WHERE user_id = ?
+          `, [userId]);
+        }
+      }
 
       const updated = await uniqueService.updateById(
         TABLE_NAME,

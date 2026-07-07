@@ -170,6 +170,18 @@ const UpdatePasswordScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => {
+          if (navigation.canGoBack()) navigation.goBack();
+        }}>
+          <Text style={styles.backArrow}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{isLoggedInMode ? 'Change Password' : 'Update Password'}</Text>
+        <View style={styles.backButtonPlaceholder} />
+      </View>
+
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -181,8 +193,6 @@ const UpdatePasswordScreen = () => {
             <Text style={styles.iconEmoji}>🔒</Text>
           </View>
 
-          {/* Title */}
-          <Text style={styles.title}>{isLoggedInMode ? 'Change Password' : 'Update Password'}</Text>
           <Text style={styles.subtitle}>
             {isLoggedInMode 
               ? 'Enter your current password to set a new one'
@@ -218,7 +228,7 @@ const UpdatePasswordScreen = () => {
                   style={styles.eyeButton}
                   onPress={() => setShowCurrentPassword(!showCurrentPassword)}
                 >
-                  <Text style={styles.eyeIcon}>
+                  <Text style={styles.eyeText}>
                     {showCurrentPassword ? '👁️' : '👁️‍🗨️'}
                   </Text>
                 </TouchableOpacity>
@@ -466,6 +476,33 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 13,
     fontWeight: '500',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+    backgroundColor: '#ffffff',
+    width: '100%',
+  },
+  backButton: {
+    padding: 8,
+  },
+  backArrow: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#111',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111',
+  },
+  backButtonPlaceholder: {
+    width: 38,
   },
 });
 

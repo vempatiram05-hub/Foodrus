@@ -30,6 +30,7 @@ interface AddressItem {
   icon: string;
   address: string;
   phone?: string;
+  isDefault: boolean;
 }
 
 interface SavedAddressesScreenProps {
@@ -100,8 +101,8 @@ export default function SavedAddressesScreen({
             addr.line1,
             addr.line2,
             addr.city,
-            addr.state_name || addr.state_id,
-            addr.country_name || addr.country_id,
+            addr.state_name,
+            addr.country_name,
             addr.postal_code,
           ].filter(Boolean);
 
@@ -111,6 +112,7 @@ export default function SavedAddressesScreen({
             icon: icon,
             address: addressParts.join(', '),
             phone: payload.phone, // fallback to user's phone
+            isDefault: !!addr.is_default,
           };
         });
         setAddresses(mappedAddresses);
@@ -140,6 +142,29 @@ export default function SavedAddressesScreen({
     navigation?.navigate?.('CreateAddressScreen', { id });
   };
 
+  const handleToggleDefault = async (id: string, currentStatus: boolean) => {
+    try {
+      const response = await fetch(`${BASE_URL}/addresses/updateAddress/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          is_default: !currentStatus
+        })
+      });
+      const json = await response.json();
+      if (json.success) {
+        fetchAddresses();
+      } else {
+        console.error('Failed to update default address:', json.message);
+      }
+    } catch (error) {
+      console.error('Error updating default address:', error);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       const response = await fetch(`${BASE_URL}/addresses/deleteAddress/${id}`, {
@@ -160,11 +185,6 @@ export default function SavedAddressesScreen({
     }
   };
 
-//   const handleShare = (item: AddressItem): void => {
-//     // wire up Share API here
-//     console.log('Share address:', item.id);
-//   };
-
   const renderAddress = ({ item, index }: ListRenderItemInfo<AddressItem>) => (
     <View
       style={[
@@ -172,10 +192,11 @@ export default function SavedAddressesScreen({
         index !== addresses.length - 1 && styles.addressRowBorder,
       ]}
     >
-      {/* <Text style={styles.rowIcon}>{item.icon}</Text> */}
-
       <View style={styles.rowContent}>
-        <Text style={styles.rowTitle}>{item.type}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.rowTitle}>{item.type}</Text>
+          {item.isDefault ? <Text style={styles.defaultBadge}>Default</Text> : null}
+        </View>
         <Text style={styles.rowAddress}>{item.address}</Text>
         {item.phone ? <Text style={styles.rowPhone}>Phone number: {item.phone}</Text> : null}
 
@@ -185,6 +206,11 @@ export default function SavedAddressesScreen({
           </TouchableOpacity>
           <TouchableOpacity onPress={() => handleDelete(item.id)}>
             <Text style={styles.actionText}>DELETE</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleToggleDefault(item.id, !!item.isDefault)}>
+            <Text style={[styles.actionText, styles.defaultActionText]}>
+              {item.isDefault ? 'REMOVE DEFAULT' : 'SET AS DEFAULT'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -319,11 +345,26 @@ const styles = StyleSheet.create({
   rowContent: {
     flex: 1,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
   rowTitle: {
     fontSize: 17,
     fontWeight: '700',
     color: BLACK,
-    marginBottom: 6,
+  },
+  defaultBadge: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: ORANGE,
+    backgroundColor: '#FEF3E7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginLeft: 8,
+    overflow: 'hidden',
   },
   rowAddress: {
     fontSize: 14,
@@ -338,6 +379,7 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
   actionText: {
     fontSize: 13,
@@ -345,6 +387,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     color: ORANGE,
     marginRight: 24,
+  },
+  defaultActionText: {
+    color: '#4B5563',
   },
   emptyWrap: {
     flex: 1,

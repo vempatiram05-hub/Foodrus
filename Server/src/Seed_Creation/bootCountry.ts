@@ -29,7 +29,7 @@ export async function bootCountry(): Promise<string | null> {
     const { data, error } = await DBconnection.from("country")
       .insert({
         name: countryName
-      });
+      }) as any;
 
     if (error) throw error;
     const countryId = data.id;

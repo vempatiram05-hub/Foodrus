@@ -204,6 +204,18 @@ const UpdateProfileScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => {
+          if (navigation.canGoBack()) navigation.goBack();
+        }}>
+          <Text style={styles.backArrow}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Update Profile</Text>
+        <View style={styles.backButtonPlaceholder} />
+      </View>
+
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -213,11 +225,6 @@ const UpdateProfileScreen = () => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Title */}
-          <Text style={styles.title}>Update Profile</Text>
-          <Text style={styles.subtitle}>
-            Keep your personal information up to date
-          </Text>
 
           {/* Photo Upload */}
           <View style={styles.photoSection}>
@@ -477,6 +484,32 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 13,
     fontWeight: '500',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+    backgroundColor: '#ffffff',
+  },
+  backButton: {
+    padding: 8,
+  },
+  backArrow: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#111',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111',
+  },
+  backButtonPlaceholder: {
+    width: 38,
   },
 });
 

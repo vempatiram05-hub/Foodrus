@@ -306,6 +306,18 @@ const CreateAddressScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => {
+          if (navigation.canGoBack()) navigation.goBack();
+        }}>
+          <Text style={styles.backArrow}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{editId ? 'Edit Address' : 'Create Address'}</Text>
+        <View style={styles.backButtonPlaceholder} />
+      </View>
+
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -315,11 +327,6 @@ const CreateAddressScreen = () => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
-          <View style={styles.iconCircle}>
-            <Text style={styles.iconEmoji}>📍</Text>
-          </View>
-          <Text style={styles.title}>{editId ? 'Edit Address' : 'Create Address'}</Text>
           <Text style={styles.subtitle}>
             Fill in all fields to save your delivery address
           </Text>
@@ -726,6 +733,33 @@ const styles = StyleSheet.create({
   toastSuccess: { backgroundColor: ORANGE },
   toastError: { backgroundColor: '#e53935' },
   toastText: { color: '#ffffff', fontSize: 13, fontWeight: '500' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+    backgroundColor: '#ffffff',
+    width: '100%',
+  },
+  backButton: {
+    padding: 8,
+  },
+  backArrow: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#111',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111',
+  },
+  backButtonPlaceholder: {
+    width: 38,
+  },
 });
 
 export default CreateAddressScreen;

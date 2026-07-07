@@ -12,6 +12,7 @@ import UpdatePasswordScreen from '../screens/UpdatePasswordScreen';
 import UpdateProfileScreen from '../screens/UpdateProfileScreen';
 import CreateAddressScreen from '../screens/CreateAddressScreen'
 import SavedAddressesScreen from '../screens/SavedAddressesScreen'
+import MyDetailsScreen from '../screens/MyDetailsScreen';
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
@@ -30,6 +31,7 @@ export default function AppNavigator() {
         <Stack.Screen name="UpdateProfile" component={UpdateProfileScreen} />
         <Stack.Screen name="CreateAddressScreen" component={CreateAddressScreen} />
         <Stack.Screen name="SavedAddressesScreen" component={SavedAddressesScreen} />
+        <Stack.Screen name="MyDetails" component={MyDetailsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

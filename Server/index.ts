@@ -1,6 +1,6 @@
 import "./src/config/env"; // Validates all required env vars at startup — exits if any are missing
 import app from "./app";
-import { DBconnection } from "./src/config/DBConnect";
+import { DBconnection, initializePool } from "./src/config/DBConnect";
 import { bootMasterAdmin } from "./src/Seed_Creation/bootMasterAdmin";
 import { bootCountry } from "./src/Seed_Creation/bootCountry";
 import { bootState } from "./src/Seed_Creation/bootState"
@@ -39,7 +39,27 @@ async function startServer() {
     await bootMasterAdmin();
     const countryId = await bootCountry();
     if (countryId) {
-      await bootState(countryId);
+      const stateId = await bootState(countryId);
+      if (stateId) {
+        try {
+          const pool = initializePool();
+          await pool.query(`
+            UPDATE addresses 
+            SET country_id = ? 
+            WHERE country_id IS NULL OR country_id NOT IN (SELECT id FROM country)
+          `, [countryId]);
+
+          await pool.query(`
+            UPDATE addresses 
+            SET state_id = ? 
+            WHERE state_id NOT IN (SELECT id FROM state)
+          `, [stateId]);
+
+          logger.info("Repaired orphaned address country/state IDs successfully");
+        } catch (err: any) {
+          logger.error("Failed to repair orphaned addresses on startup", { message: err.message });
+        }
+      }
     }
 
     const server = app.listen(PORT, () => {
