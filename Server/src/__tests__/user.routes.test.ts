@@ -107,7 +107,7 @@ describe("User Routes", () => {
           email: mockUser.email,
           full_name: mockUser.full_name,
           password: "Password123!",
-          phone: "9999999999",
+          phone: "+919999999999",
           role_name: "Customer",
           latitude: 12.34,
           longitude: 56.78,

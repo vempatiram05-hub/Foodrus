@@ -141,6 +141,7 @@ function setupForEmployeeCreate(empRole = "Employee") {
     select: jest.fn().mockReturnThis(),
     eq: jest.fn().mockReturnThis(),
     single: jest.fn().mockResolvedValue({ data: storeRecord, error: null }),
+    maybeSingle: jest.fn().mockResolvedValue({ data: storeRecord, error: null }),
   });
 }
 
@@ -161,7 +162,7 @@ describe("POST /api/users/register", () => {
         email: "new@example.com",
         full_name: "New User",
         password: "Password123!",
-        phone: "9999999999",
+        phone: "+919999999999",
         role_name: "Customer",
         latitude: 12.34,
         longitude: 56.78,
@@ -182,7 +183,7 @@ describe("POST /api/users/register", () => {
         email: "new@example.com",
         full_name: "New User",
         password: "Password123!",
-        phone: "9999999999",
+        phone: "+919999999999",
         role_name: "Customer",
         latitude: 12.34,
         longitude: 56.78,
@@ -211,7 +212,7 @@ describe("POST /api/users/register", () => {
         email: "sub@example.com",
         full_name: "Sub Admin",
         password: "Password123!",
-        phone: "8888888888",
+        phone: "+918888888888",
         role_name: "SubAdmin",
       });
 
@@ -231,8 +232,68 @@ describe("POST /api/users/register", () => {
         email: "someone@example.com",
         full_name: "Someone",
         password: "Password123!",
-        phone: "7777777777",
+        phone: "+917777777777",
         role_name: "Employee",
+      });
+
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+    });
+
+    it("Admin can register a StoreAdmin directly and sets direct parent IDs", async () => {
+      _mockUser = {
+        id: "c1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        role_name: "Admin",
+        permissions: { Users: { create: { allowed: true }, view: { allowed: true } } },
+      };
+      const storeAdminUser = {
+        id: "store-admin-xyz",
+        email: "storeadmin@example.com",
+        full_name: "New Store Admin",
+        phone: "+919000000000",
+        role_name: "StoreAdmin",
+        is_active: true,
+        account_status: "active",
+        permissions: {},
+        images: [],
+      };
+      (UniqueService.prototype.getDataByField as jest.Mock)
+        .mockResolvedValueOnce([]) // email check
+        .mockResolvedValueOnce([]) // phone check
+        .mockResolvedValue([]);
+      (UniqueService.prototype.create as jest.Mock).mockResolvedValue(storeAdminUser);
+
+      const res = await request(app).post("/api/users/register").send({
+        email: "storeadmin@example.com",
+        full_name: "New Store Admin",
+        password: "Password123!",
+        phone: "+919000000000",
+        role_name: "StoreAdmin",
+      });
+
+      expect(res.status).toBe(201);
+      const createCall = (UniqueService.prototype.create as jest.Mock).mock.calls[0];
+      const createdPayload = createCall[1];
+      expect(createdPayload.admin_id).toBe("c1b2c3d4-e5f6-7890-abcd-ef1234567890");
+      expect(createdPayload.superadmin_id).toBeNull();
+      expect(createdPayload.sub_admin_id).toBeNull();
+      expect(createdPayload.store_admin_id).toBeNull();
+    });
+
+    it("SubAdmin attempting to register a StoreAdmin returns 403 (no longer in hierarchy)", async () => {
+      _mockUser = {
+        id: "sub-admin-1",
+        role_name: "SubAdmin",
+        permissions: { Users: { create: { allowed: true }, view: { allowed: true } } },
+      };
+      (UniqueService.prototype.getDataByField as jest.Mock).mockResolvedValue([]);
+
+      const res = await request(app).post("/api/users/register").send({
+        email: "storeadmin@example.com",
+        full_name: "New Store Admin",
+        password: "Password123!",
+        phone: "+919000000000",
+        role_name: "StoreAdmin",
       });
 
       expect(res.status).toBe(403);
@@ -254,7 +315,7 @@ describe("POST /api/users/register", () => {
         email: "cust@example.com",
         full_name: "A Customer",
         password: "Password123!",
-        phone: "6666666666",
+        phone: "+916666666666",
         role_name: "Customer",
       });
 
@@ -275,7 +336,7 @@ describe("POST /api/users/register", () => {
         email: "cust2@example.com",
         full_name: "Another Customer",
         password: "Password123!",
-        phone: "5555555555",
+        phone: "+915555555555",
         role_name: "Customer",
       });
 
@@ -294,7 +355,7 @@ describe("POST /api/users/register", () => {
         email: "dup@example.com",
         full_name: "Dup User",
         password: "Password123!",
-        phone: "4444444444",
+        phone: "+914444444444",
         role_name: "Customer",
       });
 
@@ -311,7 +372,7 @@ describe("POST /api/users/register", () => {
         email: "unique@example.com",
         full_name: "Dup Phone User",
         password: "Password123!",
-        phone: "3333333333",
+        phone: "+913333333333",
         role_name: "Customer",
       });
 
@@ -330,7 +391,7 @@ describe("POST /api/users/register", () => {
         email: "emp@example.com",
         full_name: "New Employee",
         password: "Password123!",
-        phone: "2222222222",
+        phone: "+912222222222",
         role_name: "Employee",
         store_id: STORE_UUID,
       });
@@ -352,7 +413,7 @@ describe("POST /api/users/register", () => {
         email: "emp2@example.com",
         full_name: "Empowered Employee",
         password: "Password123!",
-        phone: "1111111111",
+        phone: "+911111111111",
         role_name: "Employee",
         store_id: STORE_UUID,
         permissions: { Products: { create: { allowed: true } } },

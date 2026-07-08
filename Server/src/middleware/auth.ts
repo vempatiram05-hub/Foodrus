@@ -275,6 +275,13 @@ export const requirePermission = (module: string, action: string) => {
       });
     }
 
+    // ✅ Role-based bypass for Admin/SuperAdmin on Admin-controlled modules (Store, Categories, Subcategories)
+    if (user.role_name === "Admin" || user.role_name === "SuperAdmin") {
+      if (["Store", "Categories", "Subcategories"].includes(module)) {
+        return next();
+      }
+    }
+
     const permissions = user.permissions;
 
     if (!permissions) {

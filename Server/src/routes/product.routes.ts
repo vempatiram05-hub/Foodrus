@@ -29,8 +29,4 @@ productrouter.delete("/DeleteProduct/:id", authMiddleware, requireRole("StoreAdm
 
 
 
-productrouter.put("/ApproveProductById/approve/:id", authMiddleware, requireRole("SubAdmin"), requirePermission('Products', 'approve'), ProductController.approve);
-
-productrouter.put("/RejectProductById/reject/:id", authMiddleware, requireRole("SubAdmin"), requirePermission('Products', 'approve'), ProductController.reject);
-
 export default productrouter;

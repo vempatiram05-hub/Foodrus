@@ -2,7 +2,7 @@ import { Router } from "express";
 import { CategoryController } from "../controllers/category.controller";
 import { memoryUploader } from "../middleware/upload";
 import { validate } from "../middleware/validate";
-import { authMiddleware, optionalAuthMiddlewares, requirePermission } from "../middleware/auth";
+import { authMiddleware, optionalAuthMiddlewares, requirePermission, requireRole } from "../middleware/auth";
 import { createCategorySchema, updateCategorySchema } from "../validators/category.validators";
 
 const router = Router();
@@ -15,6 +15,7 @@ router.get("/getCategoryById/:id", CategoryController.getById);
 router.post(
   "/CreateCategory",
   authMiddleware,
+  requireRole("Admin", "SuperAdmin"),
   requirePermission("Categories", "create"),
   memoryUploader.array("images", 5),
   validate(createCategorySchema),
@@ -24,6 +25,7 @@ router.post(
 router.put(
   "/UpdateCategory/:id",
   authMiddleware,
+  requireRole("Admin", "SuperAdmin"),
   requirePermission("Categories", "edit"),
   memoryUploader.array("images", 5),
   validate(updateCategorySchema),
@@ -33,6 +35,7 @@ router.put(
 router.delete(
   "/deleteCategory/:id",
   authMiddleware,
+  requireRole("Admin", "SuperAdmin"),
   requirePermission("Categories", "delete"),
   CategoryController.delete
 );

@@ -111,9 +111,9 @@ interface User {
 }
 
 export const rolePermissions: Record<string, string[]> = {
-  Admin: ["SuperAdmin"],
+  Admin: ["SuperAdmin", "StoreAdmin"],
   SuperAdmin: ["SubAdmin"],
-  SubAdmin: ["StoreAdmin"],
+  SubAdmin: [],
   StoreAdmin: ["Employee"],
   Employee: ["Customer"],
   Customer: [],
@@ -275,9 +275,9 @@ export const register = async (req: Request, res: Response) => {
 
     /* ================= HIERARCHY RULE ================= */
     const hierarchyMap: any = {
-      Admin: ["SuperAdmin"],
+      Admin: ["SuperAdmin", "StoreAdmin"],
       SuperAdmin: ["SubAdmin"],
-      SubAdmin: ["StoreAdmin"],
+      SubAdmin: [],
       StoreAdmin: ["Employee"],
     };
 
@@ -1550,19 +1550,19 @@ export const updateUser = async (req: Request, res: Response) => {
     const existingUser = await uniqueService.getDataById<User>(userId, TABLE);
     if (!existingUser) return res.status(404).json({ success: false, message: "User not found" });
 
-    const DIRECT_REPORT: Record<string, string> = {
-      Admin: 'SuperAdmin',
-      SuperAdmin: 'SubAdmin',
-      SubAdmin: 'StoreAdmin',
-      StoreAdmin: 'Employee',
+    const DIRECT_REPORT: Record<string, string[]> = {
+      Admin: ['SuperAdmin', 'StoreAdmin'],
+      SuperAdmin: ['SubAdmin'],
+      SubAdmin: [],
+      StoreAdmin: ['Employee'],
     };
     const actor = req.user as { id: string; role_name: string } | undefined;
     if (actor?.role_name) {
-      const requiredRole = DIRECT_REPORT[actor.role_name];
-      if (!requiredRole || existingUser.role_name !== requiredRole) {
+      const allowedRoles = DIRECT_REPORT[actor.role_name] || [];
+      if (!allowedRoles.includes(existingUser.role_name)) {
         return res.status(403).json({
           success: false,
-          message: `You can only manage users with role '${requiredRole || 'none'}'`,
+          message: `You can only manage users with role '${allowedRoles.join(" or ") || 'none'}'`,
         });
       }
     }
@@ -1647,19 +1647,19 @@ export const deleteUser = async (req: Request, res: Response) => {
     const existingUser = await uniqueService.getDataById(userId, TABLE);
     if (!existingUser) return res.status(404).json({ success: false, message: "User not found" });
 
-    const DIRECT_REPORT_DEL: Record<string, string> = {
-      Admin: 'SuperAdmin',
-      SuperAdmin: 'SubAdmin',
-      SubAdmin: 'StoreAdmin',
-      StoreAdmin: 'Employee',
+    const DIRECT_REPORT_DEL: Record<string, string[]> = {
+      Admin: ['SuperAdmin', 'StoreAdmin'],
+      SuperAdmin: ['SubAdmin'],
+      SubAdmin: [],
+      StoreAdmin: ['Employee'],
     };
     const actor = req.user as { id: string; role_name: string } | undefined;
     if (actor?.role_name) {
-      const requiredRole = DIRECT_REPORT_DEL[actor.role_name];
-      if (!requiredRole || existingUser.role_name !== requiredRole) {
+      const allowedRoles = DIRECT_REPORT_DEL[actor.role_name] || [];
+      if (!allowedRoles.includes(existingUser.role_name)) {
         return res.status(403).json({
           success: false,
-          message: `You can only delete users with role '${requiredRole || 'none'}'`,
+          message: `You can only delete users with role '${allowedRoles.join(" or ") || 'none'}'`,
         });
       }
     }
@@ -1691,19 +1691,19 @@ export const updateStatus = async (req: Request, res: Response) => {
     const user = await uniqueService.getDataById(userId, TABLE);
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-    const DIRECT_REPORT_STATUS: Record<string, string> = {
-      Admin: 'SuperAdmin',
-      SuperAdmin: 'SubAdmin',
-      SubAdmin: 'StoreAdmin',
-      StoreAdmin: 'Employee',
+    const DIRECT_REPORT_STATUS: Record<string, string[]> = {
+      Admin: ['SuperAdmin', 'StoreAdmin'],
+      SuperAdmin: ['SubAdmin'],
+      SubAdmin: [],
+      StoreAdmin: ['Employee'],
     };
     const actorStatus = req.user as { id: string; role_name: string } | undefined;
     if (actorStatus?.role_name) {
-      const requiredRole = DIRECT_REPORT_STATUS[actorStatus.role_name];
-      if (!requiredRole || user.role_name !== requiredRole) {
+      const allowedRoles = DIRECT_REPORT_STATUS[actorStatus.role_name] || [];
+      if (!allowedRoles.includes(user.role_name)) {
         return res.status(403).json({
           success: false,
-          message: `You can only update status for users with role '${requiredRole || 'none'}'`,
+          message: `You can only update status for users with role '${allowedRoles.join(" or ") || 'none'}'`,
         });
       }
     }
@@ -1925,18 +1925,18 @@ export const updateAccountStatus = async (req: Request, res: Response) => {
     const targetRole = targetUser.role_name;
 
     // --- DIRECT PARENT CHECK ---
-    const DIRECT_REPORT: Record<string, string> = {
-      Admin: 'SuperAdmin',
-      SuperAdmin: 'SubAdmin',
-      SubAdmin: 'StoreAdmin',
-      StoreAdmin: 'Employee',
+    const DIRECT_REPORT: Record<string, string[]> = {
+      Admin: ['SuperAdmin', 'StoreAdmin'],
+      SuperAdmin: ['SubAdmin'],
+      SubAdmin: [],
+      StoreAdmin: ['Employee'],
     };
 
-    const requiredRole = DIRECT_REPORT[actor.role_name];
-    if (!requiredRole || targetRole !== requiredRole) {
+    const allowedRoles = DIRECT_REPORT[actor.role_name] || [];
+    if (!allowedRoles.includes(targetRole)) {
       return res.status(403).json({
         success: false,
-        message: `You are only allowed to modify ${requiredRole || 'none'} accounts`,
+        message: `You are only allowed to modify ${allowedRoles.join(" or ") || 'none'} accounts`,
       });
     }
 

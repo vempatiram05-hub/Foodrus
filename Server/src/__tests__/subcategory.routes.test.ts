@@ -1,15 +1,47 @@
 
 /* ================= MOCK ================= */
-jest.mock("../config/DBConnect", () => ({
-  DBconnection: {
-    from: jest.fn(() => ({
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn(),
+jest.mock("../config/DBConnect", () => {
+  const queryExecutor = async (isSingle: boolean) => {
+    try {
+      const { dbPool } = require("../config/dbPool");
+      const res = await dbPool.query();
+      const rows = res?.rows ?? [];
+      if (isSingle) {
+        return { data: rows[0] ?? null, error: null };
+      }
+      return { data: rows, error: null };
+    } catch (err: any) {
+      return { data: null, error: err };
+    }
+  };
+
+  const chain: any = {
+    select: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    neq: jest.fn().mockReturnThis(),
+    in: jest.fn().mockReturnThis(),
+    is: jest.fn().mockReturnThis(),
+    ilike: jest.fn().mockReturnThis(),
+    order: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    delete: jest.fn().mockReturnThis(),
+    or: jest.fn().mockReturnThis(),
+    single: jest.fn().mockImplementation(() => queryExecutor(true)),
+    maybeSingle: jest.fn().mockImplementation(() => queryExecutor(true)),
+    then: jest.fn().mockImplementation((resolve) => {
+      queryExecutor(false).then(resolve);
+    }),
+  };
+
+  return {
+    DBconnection: {
+      from: jest.fn(() => chain),
       rpc: jest.fn(),
-    })),
-  },
-}));
+    },
+  };
+});
 
 jest.mock("../config/dbPool", () => ({
   dbPool: { query: jest.fn() },
@@ -20,7 +52,9 @@ jest.mock("../middleware/auth", () => ({
     req.user = { id: "550e8400-e29b-41d4-a716-446655440000", role_name: "Admin" };
     next();
   },
+  requireRole: (...roles: string[]) => (req: any, res: any, next: any) => next(),
   requirePermission: (_module: string, _action: string) => (_req: any, _res: any, next: any) => next(),
+  optionalAuthMiddlewares: (req: any, _res: any, next: any) => next(),
 }));
 
 jest.mock("../middleware/upload", () => ({
@@ -109,8 +143,9 @@ describe("Subcategory Routes", () => {
       .post("/api/subcategories/createSubcategory")
       .send({ name: "Mobiles", category_id: TEST_UUID });
 
-    expect(res.status).toBe(409);
-    expect(res.body.success).toBe(false);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.already_exists).toBe(true);
   });
 
   /* ================= GET LIST ================= */

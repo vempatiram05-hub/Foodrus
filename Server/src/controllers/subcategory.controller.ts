@@ -13,8 +13,7 @@ if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 const normalize = (name: string) => name.trim().toLowerCase();
 
 const mapImages = (images?: any): string[] => {
-  if (!images) return [];
-  const arr = Array.isArray(images) ? images : [];
+  const arr = parseImages(images);
   return arr.map((img: string) => generateLocalSignedUrl(img));
 };
 

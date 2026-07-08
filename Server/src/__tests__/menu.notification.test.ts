@@ -78,7 +78,7 @@ function stubHappyPath() {
     data: { id: SUBADMIN_ID, email: "sub@test.com", full_name: "Sub Admin" },
     error: null,
   });
-  const channelChain      = makeChain({ data: { id: CHANNEL_ID }, error: null });
+  const channelChain      = makeChain({ data: { id: CHANNEL_ID }, error: null }, "maybeSingle");
   const notifyInsertChain = makeChain({ data: null, error: null }, "insert");
 
   mockFrom

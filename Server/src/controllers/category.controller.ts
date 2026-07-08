@@ -11,11 +11,14 @@ import { logger } from "../utils/logger";
 const UPLOAD_DIR = path.join(process.cwd(), "src/uploads/categories");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-const normalizeName = (name: string) => name.trim().toLowerCase();
+const normalizeName = (name: string) => name.trim();
 
 const mapImages = (images: any): string[] => {
-  if (!images) return [];
-  const arr = Array.isArray(images) ? images : [];
+  let parsed = images;
+  if (typeof images === "string") {
+    try { parsed = JSON.parse(images); } catch (e) {}
+  }
+  const arr = Array.isArray(parsed) ? parsed : [];
   return arr.map((img: string) => generateLocalSignedUrl(img));
 };
 
@@ -42,15 +45,14 @@ const ADMIN_ROLES = ["Admin", "SuperAdmin"];
 let _createdByExists: boolean | null = null;
 async function detectCreatedByCol(): Promise<boolean> {
   if (_createdByExists !== null) return _createdByExists;
-  const { error } = await (DBconnection.from("categories") as any).select("created_by").limit(1);
-  _createdByExists = !error || !error.message.includes("created_by");
+  try {
+    const { error } = await (DBconnection.from("categories") as any).select("created_by").limit(1);
+    _createdByExists = !error || !error.message.includes("created_by");
+  } catch (err: any) {
+    _createdByExists = false;
+  }
   if (!_createdByExists) {
-    console.warn(
-      "[categories] ⚠️  categories.created_by column not found in Supabase.\n" +
-      "  Run in your Supabase SQL editor:\n" +
-      "  ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS created_by UUID;\n" +
-      "  CREATE INDEX IF NOT EXISTS idx_categories_created_by ON public.categories (created_by);"
-    );
+    console.warn("[categories] ⚠️  categories.created_by column not found in database.");
   }
   return _createdByExists;
 }
@@ -58,22 +60,14 @@ async function detectCreatedByCol(): Promise<boolean> {
 let _isGlobalColExists: boolean | null = null;
 async function detectIsGlobalCol(): Promise<boolean> {
   if (_isGlobalColExists !== null) return _isGlobalColExists;
-  const { error } = await (DBconnection.from("categories") as any).select("is_global").limit(1);
-  _isGlobalColExists = !error || !error.message.includes("is_global");
+  try {
+    const { error } = await (DBconnection.from("categories") as any).select("is_global").limit(1);
+    _isGlobalColExists = !error || !error.message.includes("is_global");
+  } catch (err: any) {
+    _isGlobalColExists = false;
+  }
   if (!_isGlobalColExists) {
-    console.warn(
-      "[categories] ⚠️  categories.is_global column not found in Supabase.\n" +
-      "  Run this SQL in your Supabase SQL editor (Dashboard → SQL Editor → New query):\n\n" +
-      "  ALTER TABLE public.categories\n" +
-      "    ADD COLUMN IF NOT EXISTS is_global boolean NOT NULL DEFAULT false;\n\n" +
-      "  UPDATE public.categories\n" +
-      "    SET is_global = TRUE\n" +
-      "   WHERE created_by IN (\n" +
-      "     SELECT id FROM public.users WHERE role_name IN ('Admin', 'SuperAdmin')\n" +
-      "   );\n\n" +
-      "  CREATE INDEX IF NOT EXISTS idx_categories_is_global\n" +
-      "    ON public.categories (is_global) WHERE is_global = TRUE;\n"
-    );
+    console.warn("[categories] ⚠️  categories.is_global column not found in database.");
   }
   return _isGlobalColExists;
 }
@@ -141,6 +135,7 @@ async function getAdminId(fallbackId: string): Promise<string> {
 export class CategoryController {
 
   static async create(req: any, res: Response) {
+    let images: string[] | undefined;
     try {
       const { name, description, is_active, type } = req.body;
       if (!name) return res.status(400).json({ success: false, message: "Category name is required" });
@@ -153,86 +148,15 @@ export class CategoryController {
       const CAT_COLS = await getCatCols();
       const hasIsGlobalCol = await detectIsGlobalCol();
 
-      // ── 1. Check if a category with this name already exists ─────────────────
+      // ── 1. Check if a category with this name already exists (case-sensitive) ──
       const { data: existing } = await (DBconnection.from("categories") as any)
-        .select(CAT_COLS).ilike("name", normalized).limit(1).maybeSingle();
+        .select(CAT_COLS).eq("name", normalized).limit(1).maybeSingle();
 
-      if (existing) {
-        const existingIsGlobal = await resolveIsGlobal(existing);
-
-        // 1a. Already globally promoted — return as-is
-        if (existingIsGlobal) {
-          return res.status(200).json({
-            success: true,
-            already_global: true,
-            message: "This is already a shared global category — it has been added to your view.",
-            data: { ...existing, images: mapImages(existing.images), type: existing.type ?? "food", is_global: true },
-          });
-        }
-
-        // 1b. Admin/SuperAdmin caller — they see all categories, just return it
-        if (ADMIN_ROLES.includes(req.user.role_name)) {
-          return res.status(200).json({
-            success: true,
-            already_global: true,
-            message: "This category already exists.",
-            data: { ...existing, images: mapImages(existing.images), type: existing.type ?? "food", is_global: existingIsGlobal },
-          });
-        }
-
-        // 1c. SubAdmin/StoreAdmin/Employee — check hierarchy
-        const governingSubAdminId: string | null =
-          req.user.role_name === "SubAdmin" ? req.user.id :
-          (req.user.sub_admin_id ?? null);
-
-        if (governingSubAdminId) {
-          const { data: hierarchyUsers } = await DBconnection
-            .from("users").select("id").eq("sub_admin_id", governingSubAdminId);
-          const hierarchyIdSet = new Set((hierarchyUsers ?? []).map((u: any) => u.id));
-          hierarchyIdSet.add(governingSubAdminId);
-
-          if (existing.created_by && hierarchyIdSet.has(existing.created_by)) {
-            // Same hierarchy → duplicate
-            return res.status(409).json({ success: false, message: "Category name already exists in your scope" });
-          }
-
-          // Foreign hierarchy → promote to global: set is_global = true in DB
-          const adminId = await getAdminId(req.user.id);
-          if (!adminId || adminId === req.user.id) {
-            throw new Error("Cannot promote category: no Admin user exists to take ownership. Please contact your administrator.");
-          }
-          const now = new Date().toISOString();
-          const updatePayload: any = { created_by: adminId, updated_at: now };
-          if (hasIsGlobalCol) updatePayload.is_global = true;
-
-          const { data: promoted, error: promoteErr } = await (DBconnection.from("categories") as any)
-            .update(updatePayload)
-            .eq("id", existing.id)
-            .select(CAT_COLS)
-            .single();
-          if (promoteErr) throw new Error(promoteErr.message);
-
-          invalidateAdminIdCache();
-
-          return res.status(200).json({
-            success: true,
-            promoted: true,
-            message: "This category already existed and has been made available to all stores.",
-            data: { ...promoted, images: mapImages(promoted.images), type: promoted.type ?? "food", is_global: true },
-          });
-        }
-
-        // Fallback (Employee without sub_admin_id context)
-        return res.status(200).json({
-          success: true,
-          already_global: true,
-          message: "This category already exists.",
-          data: { ...existing, images: mapImages(existing.images), type: existing.type ?? "food", is_global: existingIsGlobal },
-        });
+      if (existing && existing.name === normalized) {
+        return res.status(409).json({ success: false, message: "Category name already exists" });
       }
 
       // ── 2. Create new category ────────────────────────────────────────────────
-      let images: string[] | undefined;
       if (req.files?.length) images = saveFiles(req.files, normalized);
 
       const resolvedType = type ?? "food";
@@ -266,7 +190,9 @@ export class CategoryController {
         data: { ...row, type: resolvedType, images: mapImages(row.images), is_global: callerIsAdmin },
       });
     } catch (err: any) {
-      if (req.files?.length) req.files.forEach((f: any) => deleteFile(`/uploads/categories/${f.filename}`));
+      if (images && images.length) {
+        images.forEach((img: string) => deleteFile(img));
+      }
       return res.status(400).json({ success: false, message: err.message });
     }
   }
@@ -409,6 +335,7 @@ export class CategoryController {
   }
 
   static async update(req: any, res: Response) {
+    let savedNewImages: string[] | undefined;
     try {
       const { name, description, is_active, type } = req.body;
       const CAT_COLS = await getCatCols();
@@ -433,15 +360,26 @@ export class CategoryController {
       if (name) {
         normalizedName = normalizeName(name);
         const { data: dup } = await DBconnection
-          .from("categories").select("id")
-          .ilike("name", normalizedName).neq("id", req.params.id).maybeSingle();
-        if (dup) return res.status(409).json({ success: false, message: "A category with this name already exists" });
+          .from("categories").select("id, name")
+          .eq("name", normalizedName).neq("id", req.params.id).maybeSingle();
+        if (dup && dup.name === normalizedName) {
+          return res.status(409).json({ success: false, message: "A category with this name already exists" });
+        }
       }
 
       let images = existing.images;
       if (req.files?.length) {
-        if (Array.isArray(existing.images)) existing.images.forEach(deleteFile);
-        images = saveFiles(req.files, normalizedName);
+        let oldImages = existing.images;
+        if (typeof oldImages === "string") {
+          try { oldImages = JSON.parse(oldImages); } catch (e) { oldImages = []; }
+        }
+        const oldImagesList = Array.isArray(oldImages) ? oldImages : [];
+
+        savedNewImages = saveFiles(req.files, normalizedName);
+        images = savedNewImages;
+
+        // delete old files
+        oldImagesList.forEach(deleteFile);
       }
 
       const responseType = type ?? existing.type ?? "food";
@@ -470,7 +408,9 @@ export class CategoryController {
         data: { ...row, type: responseType, images: mapImages(row.images), is_global: updatedIsGlobal },
       });
     } catch (err: any) {
-      if (req.files?.length) req.files.forEach((f: any) => deleteFile(`/uploads/categories/${f.filename}`));
+      if (savedNewImages && savedNewImages.length) {
+        savedNewImages.forEach((img: string) => deleteFile(img));
+      }
       return res.status(400).json({ success: false, message: err.message });
     }
   }
@@ -497,7 +437,13 @@ export class CategoryController {
         .from("subcategories").select("id", { count: "exact", head: true }).eq("category_id", req.params.id);
       if ((count ?? 0) > 0) throw new Error("Cannot delete category — subcategories exist.");
 
-      if (Array.isArray(existing.images)) existing.images.forEach(deleteFile);
+      let oldImages = existing.images;
+      if (typeof oldImages === "string") {
+        try { oldImages = JSON.parse(oldImages); } catch (e) { oldImages = []; }
+      }
+      if (Array.isArray(oldImages)) {
+        oldImages.forEach(deleteFile);
+      }
 
       const { error: delErr } = await DBconnection.from("categories").delete().eq("id", req.params.id);
       if (delErr) throw new Error(delErr.message);

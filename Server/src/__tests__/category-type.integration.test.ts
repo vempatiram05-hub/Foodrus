@@ -21,23 +21,56 @@ jest.mock("pg", () => {
   return { Pool: jest.fn().mockImplementation(() => pool) };
 });
 
-jest.mock("../config/DBConnect", () => ({
-  DBconnection: {
-    from: jest.fn(() => ({
-      select:      jest.fn().mockReturnThis(),
-      eq:          jest.fn().mockReturnThis(),
-      neq:         jest.fn().mockReturnThis(),
-      in:          jest.fn().mockReturnThis(),
-      is:          jest.fn().mockReturnThis(),
-      ilike:       jest.fn().mockReturnThis(),
-      order:       jest.fn().mockReturnThis(),
-      limit:       jest.fn().mockReturnThis(),
-      range:       jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
-      single:      jest.fn().mockResolvedValue({ data: null, error: null }),
-    })),
-  },
-}));
+import "pg";
+
+jest.mock("../config/DBConnect", () => {
+  let selectedFields = "";
+  const queryExecutor = async (isSingle: boolean) => {
+    try {
+      if (selectedFields === "is_global" || selectedFields === "created_by") {
+        return { data: [], error: null };
+      }
+      const res = await globalThis.__categoryPoolMock.query();
+      const rows = res?.rows ?? [];
+      if (isSingle) {
+        return { data: rows[0] ?? null, error: null };
+      }
+      return { data: rows, error: null };
+    } catch (err: any) {
+      return { data: null, error: err };
+    }
+  };
+
+  const chain: any = {
+    select: jest.fn().mockImplementation((fields) => {
+      selectedFields = typeof fields === "string" ? fields : "";
+      return chain;
+    }),
+    eq: jest.fn().mockReturnThis(),
+    neq: jest.fn().mockReturnThis(),
+    in: jest.fn().mockReturnThis(),
+    is: jest.fn().mockReturnThis(),
+    ilike: jest.fn().mockReturnThis(),
+    order: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    range: jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    delete: jest.fn().mockReturnThis(),
+    single: jest.fn().mockImplementation(() => queryExecutor(true)),
+    maybeSingle: jest.fn().mockImplementation(() => queryExecutor(true)),
+    then: jest.fn().mockImplementation((resolve) => {
+      queryExecutor(false).then(resolve);
+    }),
+  };
+
+  return {
+    DBconnection: {
+      from: jest.fn(() => chain),
+      rpc: jest.fn(),
+    },
+  };
+});
 
 jest.mock("../services/unique.service");
 
@@ -331,7 +364,6 @@ describe("Category type field — full integration coverage", () => {
     it("33: ?page=1&limit=10&type=food → only food-type categories in result", async () => {
       // Paginated path filters at SQL level; DATA mock returns DB-filtered rows only
       catPool().query
-        .mockResolvedValueOnce({ rows: [{ count: "1" }] })   // COUNT with WHERE type='food'
         .mockResolvedValueOnce({ rows: [foodCat] });          // DATA — DB already filtered
 
       const res = await request(app).get("/api/categories/getList?page=1&limit=10&type=food");
@@ -347,7 +379,6 @@ describe("Category type field — full integration coverage", () => {
     /* 34 */
     it("34: ?page=1&limit=10&type=grocery → only grocery-type categories in result", async () => {
       catPool().query
-        .mockResolvedValueOnce({ rows: [{ count: "1" }] })   // COUNT with WHERE type='grocery'
         .mockResolvedValueOnce({ rows: [groceryCat] });       // DATA — DB already filtered
 
       const res = await request(app).get("/api/categories/getList?page=1&limit=10&type=grocery");
@@ -363,7 +394,6 @@ describe("Category type field — full integration coverage", () => {
     /* 35 */
     it("35: ?page=1&limit=10 (no type filter) → all categories returned regardless of type", async () => {
       catPool().query
-        .mockResolvedValueOnce({ rows: [{ count: "3" }] })
         .mockResolvedValueOnce({ rows: [foodCat, groceryCat, bakeryCat] });
 
       const res = await request(app).get("/api/categories/getList?page=1&limit=10");
@@ -378,7 +408,6 @@ describe("Category type field — full integration coverage", () => {
       // store_id is no longer a column on categories; the param is silently ignored.
       // DB mock returns food-typed rows (type filtering still applies).
       catPool().query
-        .mockResolvedValueOnce({ rows: [{ count: "2" }] })
         .mockResolvedValueOnce({ rows: [foodCat, storeFoodCat] });
 
       const res = await request(app)
@@ -403,6 +432,8 @@ describe("Category type field — full integration coverage", () => {
       catPool().query.mockResolvedValueOnce({ rows: [curryFood, pastryFood, curryGrocery] });
 
       const res = await request(app).get("/api/categories/getList?type=food&search=curry");
+
+      console.log("TEST 37 RES BODY:", JSON.stringify(res.body, null, 2));
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);

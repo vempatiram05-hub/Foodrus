@@ -162,27 +162,4 @@ describe("Product Routes", () => {
     expect(res.body.success).toBe(true);
   });
 
-  /* ================= APPROVE ================= */
-  it("PUT /api/products/ApproveProductById/approve/:id → success", async () => {
-    mockService.updateById.mockResolvedValue({ ...mockProduct, approval_status: "APPROVED" } as any);
-
-    const res = await request(app)
-      .put(`/api/products/ApproveProductById/approve/${TEST_UUID}`)
-      .send({ approved_by: TEST_UUID });
-
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-  });
-
-  /* ================= REJECT ================= */
-  it("PUT /api/products/RejectProductById/reject/:id → success", async () => {
-    mockService.updateById.mockResolvedValue({ ...mockProduct, approval_status: "REJECTED" } as any);
-
-    const res = await request(app)
-      .put(`/api/products/RejectProductById/reject/${TEST_UUID}`)
-      .send({ rejected_by: TEST_UUID });
-
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-  });
 });

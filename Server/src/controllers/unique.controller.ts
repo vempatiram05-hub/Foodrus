@@ -87,6 +87,9 @@ export class UniqueController {
       });
     }
     try {
+      // Check if record exists first
+      await this.service.getDataById(id as string, this.table);
+
       // Referential integrity check
       if (Array.isArray(references) && references.length > 0) {
         for (const ref of references) {

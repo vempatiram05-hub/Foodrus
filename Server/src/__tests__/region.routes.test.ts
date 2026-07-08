@@ -106,6 +106,7 @@ describe("Region Routes", () => {
 
   /* ================= DELETE ================= */
   it("DELETE /api/regions/deleteRegion/:id → success", async () => {
+    mockService.getDataById.mockResolvedValue(mockRegion as any);
     mockService.deleteData.mockResolvedValue({ message: "deleted" } as any);
 
     const res = await request(app).delete(`/api/regions/deleteRegion/${TEST_UUID}`);

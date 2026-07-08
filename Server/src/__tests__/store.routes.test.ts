@@ -64,7 +64,8 @@ describe("Store Routes", () => {
       .send({
         name: "Store A",
         type: "GROCERY",
-        region_id: TEST_UUID
+        region_id: TEST_UUID,
+        store_admin_id: TEST_UUID
       });
 
     expect(res.status).toBe(201);
@@ -106,6 +107,7 @@ describe("Store Routes", () => {
 
   /* ================= DELETE ================= */
   it("DELETE /api/stores/deleteStore/:id → success", async () => {
+    mockService.getDataById.mockResolvedValue(mockStore as any);
     mockService.deleteData.mockResolvedValue({ message: "deleted" } as any);
 
     const res = await request(app).delete(`/api/stores/deleteStore/${TEST_UUID}`);

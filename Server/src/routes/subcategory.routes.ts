@@ -2,7 +2,7 @@ import { Router } from "express";
 import { SubcategoryController } from "../controllers/subcategory.controller";
 import { memoryUploader } from "../middleware/upload";
 import { validate } from "../middleware/validate";
-import { authMiddleware, optionalAuthMiddlewares, requirePermission } from "../middleware/auth";
+import { authMiddleware, optionalAuthMiddlewares, requirePermission, requireRole } from "../middleware/auth";
 import { createSubcategorySchema, updateSubcategorySchema } from "../validators/subcategory.validators";
 
 const router = Router();
@@ -11,6 +11,7 @@ const controller = new SubcategoryController();
 router.post(
   "/createSubcategory",
   authMiddleware,
+  requireRole("Admin", "SuperAdmin"),
   requirePermission("Subcategories", "create"),
   memoryUploader.array("images", 5),
   validate(createSubcategorySchema),
@@ -19,6 +20,7 @@ router.post(
 router.put(
   "/updateSubcategory/:id",
   authMiddleware,
+  requireRole("Admin", "SuperAdmin"),
   requirePermission("Subcategories", "edit"),
   memoryUploader.array("images", 5),
   validate(updateSubcategorySchema),
@@ -43,6 +45,7 @@ router.get(
 router.delete(
   "/deleteSubcategory/:id",
   authMiddleware,
+  requireRole("Admin", "SuperAdmin"),
   requirePermission("Subcategories", "delete"),
   controller.delete.bind(controller)
 );

@@ -14,16 +14,56 @@ jest.mock("pg", () => {
   return { Pool: jest.fn().mockImplementation(() => pool) };
 });
 
-jest.mock("../config/DBConnect", () => ({
-  DBconnection: {
-    from: jest.fn(() => ({
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn(),
+import "pg";
+
+jest.mock("../config/DBConnect", () => {
+  let selectedFields = "";
+  const queryExecutor = async (isSingle: boolean) => {
+    try {
+      if (selectedFields === "is_global" || selectedFields === "created_by") {
+        return { data: [], error: null };
+      }
+      const res = await globalThis.__catRoutePoolMock.query();
+      const rows = res?.rows ?? [];
+      if (isSingle) {
+        return { data: rows[0] ?? null, error: null };
+      }
+      return { data: rows, error: null };
+    } catch (err: any) {
+      return { data: null, error: err };
+    }
+  };
+
+  const chain: any = {
+    select: jest.fn().mockImplementation((fields) => {
+      selectedFields = typeof fields === "string" ? fields : "";
+      return chain;
+    }),
+    eq: jest.fn().mockReturnThis(),
+    neq: jest.fn().mockReturnThis(),
+    in: jest.fn().mockReturnThis(),
+    is: jest.fn().mockReturnThis(),
+    ilike: jest.fn().mockReturnThis(),
+    order: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    delete: jest.fn().mockReturnThis(),
+    or: jest.fn().mockReturnThis(),
+    single: jest.fn().mockImplementation(() => queryExecutor(true)),
+    maybeSingle: jest.fn().mockImplementation(() => queryExecutor(true)),
+    then: jest.fn().mockImplementation((resolve) => {
+      queryExecutor(false).then(resolve);
+    }),
+  };
+
+  return {
+    DBconnection: {
+      from: jest.fn(() => chain),
       rpc: jest.fn(),
-    })),
-  },
-}));
+    },
+  };
+});
 
 jest.mock("../services/unique.service");
 
@@ -171,8 +211,8 @@ describe("Category Routes", () => {
   /* ================= DELETE ================= */
   it("DELETE /api/categories/deleteCategory/:id → success", async () => {
     catPool().query
-      .mockResolvedValueOnce({ rows: [{ count: "0" }] })          // subcats check: none
-      .mockResolvedValueOnce({ rows: [{ images: mockCategory.images }] }); // SELECT images
+      .mockResolvedValueOnce({ rows: [mockCategory] })                    // fetch existing
+      .mockResolvedValueOnce({ rows: [] });                               // subcats check: none
 
     const res = await request(app).delete(`/api/categories/deleteCategory/${mockCategory.id}`);
 
@@ -182,8 +222,7 @@ describe("Category Routes", () => {
 
   it("DELETE /api/categories/deleteCategory/:id → 404 when category does not exist", async () => {
     catPool().query
-      .mockResolvedValueOnce({ rows: [{ count: "0" }] })  // subcats check: none
-      .mockResolvedValueOnce({ rows: [] });                // SELECT images: not found
+      .mockResolvedValueOnce({ rows: [] });                               // fetch existing: not found
 
     const res = await request(app).delete(`/api/categories/deleteCategory/non-existent-id`);
 
@@ -229,7 +268,7 @@ describe("Category Routes – permission guard blocks users without Categories p
     expect(res.body.success).toBe(false);
   });
 
-  it("POST /CreateCategory → 201 for StoreAdmin with Categories.create permission", async () => {
+  it("POST /CreateCategory → 403 for StoreAdmin with Categories.create permission (restricted to Admin/SuperAdmin)", async () => {
     catPool().query
       .mockResolvedValueOnce({ rows: [] })              // dup check: no conflict
       .mockResolvedValueOnce({ rows: [mockCategory] }); // INSERT RETURNING *
@@ -238,11 +277,11 @@ describe("Category Routes – permission guard blocks users without Categories p
       .post("/api/categories/CreateCategory")
       .send({ name: "Electronics", store_id: validStoreId });
 
-    expect(res.status).toBe(201);
-    expect(res.body.success).toBe(true);
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
   });
 
-  it("PUT /UpdateCategory/:id → 200 for StoreAdmin with Categories.edit permission", async () => {
+  it("PUT /UpdateCategory/:id → 403 for StoreAdmin with Categories.edit permission (restricted to Admin/SuperAdmin)", async () => {
     catPool().query
       .mockResolvedValueOnce({ rows: [mockCategory] })
       .mockResolvedValueOnce({ rows: [] })
@@ -252,11 +291,11 @@ describe("Category Routes – permission guard blocks users without Categories p
       .put(`/api/categories/UpdateCategory/${mockCategory.id}`)
       .send({ name: "Fashion", store_id: validStoreId });
 
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
   });
 
-  it("DELETE /deleteCategory/:id → 200 for StoreAdmin with Categories.delete permission", async () => {
+  it("DELETE /deleteCategory/:id → 403 for StoreAdmin with Categories.delete permission (restricted to Admin/SuperAdmin)", async () => {
     catPool().query
       .mockResolvedValueOnce({ rows: [{ count: "0" }] })
       .mockResolvedValueOnce({ rows: [{ images: mockCategory.images }] });
@@ -264,8 +303,8 @@ describe("Category Routes – permission guard blocks users without Categories p
     const res = await request(authorizedApp)
       .delete(`/api/categories/deleteCategory/${mockCategory.id}`);
 
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
   });
 });
 

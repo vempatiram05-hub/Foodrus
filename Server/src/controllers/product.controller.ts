@@ -22,8 +22,14 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 
 const normalize = (name: string) => name.trim().toLowerCase();
 
-const mapImages = (images?: string[]) =>
-  Array.isArray(images) ? images.map(generateLocalSignedUrl) : [];
+const mapImages = (images?: any): string[] => {
+  let parsed = images;
+  if (typeof images === "string") {
+    try { parsed = JSON.parse(images); } catch (e) {}
+  }
+  const arr = Array.isArray(parsed) ? parsed : [];
+  return arr.map(generateLocalSignedUrl);
+};
 
 /**
  * Fetch the store type for a given store_id.
@@ -142,6 +148,7 @@ export class ProductController {
         sku: generatedSku,
         images: [],
         change_type: "CREATE",
+        approval_status: "APPROVED",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       });
@@ -472,40 +479,5 @@ export class ProductController {
     }
   }
 
-  /* ================= APPROVE ================= */
-  static async approve(req: Request, res: Response) {
-    try {
-      const { approved_by } = req.body;
 
-      const updated = await uniqueService.updateById(TABLE_NAME, req.params.id as string, {
-        approval_status: "APPROVED",
-        is_active: true,
-        approved_by,
-        approved_at: new Date().toISOString(),
-        change_type: "APPROVE",
-      });
-
-      return res.json({ success: true, message: "Product approved successfully", data: updated });
-    } catch (err: any) {
-      return res.status(400).json({ success: false, message: normalizeSupabaseError(err).message });
-    }
-  }
-
-  /* ================= REJECT ================= */
-  static async reject(req: Request, res: Response) {
-    try {
-      const { rejected_by } = req.body;
-
-      const updated = await uniqueService.updateById(TABLE_NAME, req.params.id as string, {
-        approval_status: "REJECTED",
-        rejected_by,
-        rejected_at: new Date().toISOString(),
-        change_type: "REJECT",
-      });
-
-      return res.json({ success: true, message: "Product rejected successfully", data: updated });
-    } catch (err: any) {
-      return res.status(400).json({ success: false, message: normalizeSupabaseError(err).message });
-    }
-  }
 }

@@ -64,22 +64,39 @@ export const DEFAULT_PERMISSIONS: Record<string, UserPermissions> = {
       showInMenu: { allowed: true },
     },
     Party: { view: { allowed: true }, showInMenu: { allowed: true } },
-    Store: { view: { allowed: true }, showInMenu: { allowed: true } },
+    Store: {
+      view: { allowed: true },
+      create: { allowed: true },
+      edit: { allowed: true },
+      delete: { allowed: true },
+      showInMenu: { allowed: true },
+    },
     Orders: { view: { allowed: true }, showInMenu: { allowed: true } },
     Products: { view: { allowed: true }, showInMenu: { allowed: true } },
     Menus: { view: { allowed: true }, showInMenu: { allowed: true } },
     Payments: { view: { allowed: true }, showInMenu: { allowed: true } },
     Analytics: { view: { allowed: true }, showInMenu: { allowed: true } },
     Reports: { view: { allowed: true }, showInMenu: { allowed: true } },
-    Categories: { view: { allowed: true }, showInMenu: { allowed: true } },
-    Subcategories: { view: { allowed: true }, showInMenu: { allowed: true } },
+    Categories: {
+      view: { allowed: true },
+      create: { allowed: true },
+      edit: { allowed: true },
+      delete: { allowed: true },
+      showInMenu: { allowed: true },
+    },
+    Subcategories: {
+      view: { allowed: true },
+      create: { allowed: true },
+      edit: { allowed: true },
+      delete: { allowed: true },
+      showInMenu: { allowed: true },
+    },
     Brands: { view: { allowed: true }, showInMenu: { allowed: true } },
     Templates: { view: { allowed: true }, showInMenu: { allowed: true } },
   },
 
   // ─────────────────────────────────────────────────────────────────────
   // SUPER ADMIN – can CRUD SubAdmins; reads everything else down the hierarchy
-  // No access to Categories — category management belongs to SubAdmin only
   // ─────────────────────────────────────────────────────────────────────
   SuperAdmin: {
     Users: {
@@ -95,25 +112,41 @@ export const DEFAULT_PERMISSIONS: Record<string, UserPermissions> = {
       showInMenu: { allowed: true },
     },
     Payments: { view: { allowed: true }, showInMenu: { allowed: true } },
-    Store: { view: { allowed: true }, showInMenu: { allowed: true } },
-    Orders: { view: { allowed: true }, showInMenu: { allowed: true } },
-    Products: { view: { allowed: true }, showInMenu: { allowed: true } },
-    Menus: { view: { allowed: true }, showInMenu: { allowed: true } },
-    Analytics: { view: { allowed: true }, showInMenu: { allowed: true } },
-    Reports: { view: { allowed: true }, showInMenu: { allowed: true } },
-    Templates: { view: { allowed: true }, showInMenu: { allowed: true } },
-  },
-
-  // ─────────────────────────────────────────────────────────────────────
-  // SUB ADMIN – can CRUD Stores & StoreAdmins; can approve Products & Menus;
-  //             sole owner of Categories CRUD
-  // ─────────────────────────────────────────────────────────────────────
-  SubAdmin: {
     Store: {
       view: { allowed: true },
       create: { allowed: true },
       edit: { allowed: true },
       delete: { allowed: true },
+      showInMenu: { allowed: true },
+    },
+    Orders: { view: { allowed: true }, showInMenu: { allowed: true } },
+    Products: { view: { allowed: true }, showInMenu: { allowed: true } },
+    Menus: { view: { allowed: true }, showInMenu: { allowed: true } },
+    Analytics: { view: { allowed: true }, showInMenu: { allowed: true } },
+    Reports: { view: { allowed: true }, showInMenu: { allowed: true } },
+    Categories: {
+      view: { allowed: true },
+      create: { allowed: true },
+      edit: { allowed: true },
+      delete: { allowed: true },
+      showInMenu: { allowed: true },
+    },
+    Subcategories: {
+      view: { allowed: true },
+      create: { allowed: true },
+      edit: { allowed: true },
+      delete: { allowed: true },
+      showInMenu: { allowed: true },
+    },
+    Templates: { view: { allowed: true }, showInMenu: { allowed: true } },
+  },
+
+  // ─────────────────────────────────────────────────────────────────────
+  // SUB ADMIN
+  // ─────────────────────────────────────────────────────────────────────
+  SubAdmin: {
+    Store: {
+      view: { allowed: true },
       showInMenu: { allowed: true },
     },
     Users: {
@@ -146,16 +179,10 @@ export const DEFAULT_PERMISSIONS: Record<string, UserPermissions> = {
     },
     Categories: {
       view: { allowed: true },
-      create: { allowed: true },
-      edit: { allowed: true },
-      delete: { allowed: true },
       showInMenu: { allowed: true },
     },
     Subcategories: {
       view: { allowed: true },
-      create: { allowed: true },
-      edit: { allowed: true },
-      delete: { allowed: true },
       showInMenu: { allowed: true },
     },
     Brands: {

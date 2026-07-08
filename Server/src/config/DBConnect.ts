@@ -127,7 +127,9 @@ class QueryBuilder<T = any[]> implements PromiseLike<{ data: T; error: any; coun
   }
 
   select(columns?: string, options?: { count?: "exact" | "planned" | "estimated"; head?: boolean }): QueryBuilder<T> {
-    this.method = "select";
+    if (this.method !== "insert" && this.method !== "update") {
+      this.method = "select";
+    }
     if (columns) {
       this.selectCols = columns;
     }
@@ -386,7 +388,15 @@ class QueryBuilder<T = any[]> implements PromiseLike<{ data: T; error: any; coun
         });
 
         await pool.query(insertSql, insertParams);
-        insertedRows.push(row);
+
+        // Fetch back from database to get auto-parsed columns (such as JSON arrays)
+        const selectSql = `SELECT * FROM \`${this.tableName}\` WHERE \`id\` = ?`;
+        const [dbRows]: any = await pool.query(selectSql, [row.id]);
+        if (dbRows && dbRows[0]) {
+          insertedRows.push(dbRows[0]);
+        } else {
+          insertedRows.push(row);
+        }
       }
 
       const returnedData = isArray ? insertedRows : insertedRows[0];

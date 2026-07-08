@@ -156,6 +156,7 @@ function makeCategory(overrides: Record<string, any> = {}) {
     images:      JSON.stringify([]),
     type:        "food",
     created_by:  ADMIN_ID,
+    is_global:   true,
     created_at:  "2024-01-01T00:00:00.000Z",
     updated_at:  "2024-01-01T00:00:00.000Z",
     ...overrides,
@@ -218,7 +219,7 @@ beforeEach(() => {
 describe("CategoryController.create — name uniqueness", () => {
 
   /* P-01 ──────────────────────────────────────────────────────── */
-  it("P-01: name already exists → 200 already_global: true (no insert)", async () => {
+  it("P-01: name already exists → 409 Category name already exists", async () => {
     asSubAdmin();
     const existingCat = makeCategory();
     enqueue(ok(existingCat)); // existing name check → found
@@ -227,10 +228,9 @@ describe("CategoryController.create — name uniqueness", () => {
       .post("/api/categories/CreateCategory")
       .send({ name: "pizza" });
 
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.already_global).toBe(true);
-    expect(res.body.message).toMatch(/already a shared global/i);
+    expect(res.status).toBe(409);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/already exists/i);
   });
 
   /* P-02 ──────────────────────────────────────────────────────── */
@@ -318,7 +318,7 @@ describe("CategoryController.delete — admin-owned category guard", () => {
   /* P-06 ──────────────────────────────────────────────────────── */
   it("P-06: SubAdmin tries to delete an admin-owned category → 403", async () => {
     asSubAdmin();
-    enqueue(ok({ id: CAT_ID, images: [], created_by: ADMIN_ID }));
+    enqueue(ok({ id: CAT_ID, images: [], created_by: ADMIN_ID, is_global: true }));
     enqueue(ok({ role_name: "Admin" }));
 
     const res = await request(catApp)
@@ -332,7 +332,7 @@ describe("CategoryController.delete — admin-owned category guard", () => {
   /* P-07 ──────────────────────────────────────────────────────── */
   it("P-07: StoreAdmin tries to delete an admin-owned category → 403", async () => {
     asStoreAdmin();
-    enqueue(ok({ id: CAT_ID, images: [], created_by: ADMIN_ID }));
+    enqueue(ok({ id: CAT_ID, images: [], created_by: ADMIN_ID, is_global: true }));
     enqueue(ok({ role_name: "Admin" }));
 
     const res = await request(catApp)
