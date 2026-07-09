@@ -10,6 +10,7 @@ const router = Router();
 // Public reads — optionally authenticated so SubAdmin scoping is applied via token
 router.get("/getList", optionalAuthMiddlewares, CategoryController.getList);
 router.get("/getCategoryById/:id", CategoryController.getById);
+router.get("/getCategoryByStoreId/:store_id", CategoryController.getByStoreId);
 
 // Protected writes
 router.post(

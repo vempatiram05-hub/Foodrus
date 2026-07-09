@@ -25,26 +25,139 @@ declare global {
   var __isolationCurrentUser: any;
 }
 
+import "pg";
+
 // The DBconnection mock uses a call queue so each from() call can return
 // a different response.  The queue is populated per-test; unqueued calls fall back to { data: [] }.
-jest.mock("../config/DBConnect", () => ({
-  DBconnection: {
-    from: jest.fn((_table: string) => {
+jest.mock("../config/DBConnect", () => {
+  const createQueryChain = (tableName: string) => {
+    let selectedFields = "";
+    let inCol = "";
+    let inValues: any[] = [];
+    let orFilter = "";
+    
+    const applyFilters = (rows: any[]) => {
+      if (tableName !== "categories") return rows;
+      let filtered = rows;
+      if (inCol === "created_by" && inValues.length > 0) {
+        filtered = filtered.filter((row: any) => inValues.includes(row.created_by));
+      } else if (orFilter) {
+        const inMatch = orFilter.match(/created_by\.in\.\(([^)]+)\)/);
+        const allowedIds = inMatch ? inMatch[1].split(",") : [];
+        filtered = filtered.filter((row: any) => {
+          if (row.created_by && allowedIds.includes(row.created_by)) return true;
+          if (row.is_global === true) return true;
+          if (row.created_by === ADMIN_ID) return true;
+          return false;
+        });
+      }
+      return filtered;
+    };
+    
+    const queryExecutor = async (isSingle: boolean) => {
+      console.log(`[queryExecutor] Table: ${tableName}, selectedFields: ${selectedFields}`);
+      if (selectedFields === "created_by") {
+        console.log(`[queryExecutor] Column check created_by -> success`);
+        return { data: [], error: null };
+      }
+      if (selectedFields === "is_global") {
+        console.log(`[queryExecutor] Column check is_global -> error`);
+        return { data: null, error: new Error(`column "${selectedFields}" does not exist`) };
+      }
+      
       const queued = (globalThis.__isolationDbConnQueue ?? []).shift();
-      const result = queued ?? { data: [] };
-      const p = Promise.resolve(result);
+      if (queued !== undefined) {
+        console.log(`[queryExecutor] Queued item found:`, JSON.stringify(queued));
+        return queued;
+      }
+      
+      console.log(`[queryExecutor] Queue empty. Table is: ${tableName}`);
+      if (tableName === "subcategories") {
+        const { dbPool } = require("../config/dbPool");
+        if (dbPool && dbPool.query && jest.isMockFunction(dbPool.query)) {
+          try {
+            const res = await dbPool.query();
+            return { data: res?.rows ?? [], error: null };
+          } catch (err) {
+            return { data: null, error: err };
+          }
+        }
+      } else if (tableName === "categories") {
+        const { dbPool } = require("../config/dbPool");
+        let promise: any;
+        if (dbPool && dbPool.query && jest.isMockFunction(dbPool.query)) {
+          promise = dbPool.query();
+        }
+        if (promise && typeof promise.then === "function") {
+          try {
+            const res = await promise;
+            return { data: res?.rows ?? [], error: null };
+          } catch (err) {
+            return { data: null, error: err };
+          }
+        } else {
+          try {
+            const res = await globalThis.__isolationCatPoolMock.query();
+            return { data: applyFilters(res?.rows ?? []), error: null };
+          } catch (err) {
+            return { data: null, error: err };
+          }
+        }
+      }
+      return { data: [], error: null };
+    };
+
+    const chain: any = {
+      select: jest.fn().mockImplementation((fields) => {
+        selectedFields = typeof fields === "string" ? fields : "";
+        return chain;
+      }),
+      eq:     jest.fn().mockReturnThis(),
+      neq:    jest.fn().mockReturnThis(),
+      in:     jest.fn().mockImplementation((col, vals) => {
+        inCol = col;
+        inValues = Array.isArray(vals) ? vals : [];
+        return chain;
+      }),
+      is:     jest.fn().mockReturnThis(),
+      or:     jest.fn().mockImplementation((expr) => {
+        orFilter = expr;
+        return chain;
+      }),
+      order:  jest.fn().mockReturnThis(),
+      limit:  jest.fn().mockReturnThis(),
+      single: jest.fn().mockImplementation(() => queryExecutor(true)),
+      maybeSingle: jest.fn().mockImplementation(() => queryExecutor(true)),
+      then: jest.fn().mockImplementation((resolve) => {
+        queryExecutor(false).then(resolve);
+      }),
+    };
+    
+    return chain;
+  };
+
+  return {
+    DBconnection: {
+      from: jest.fn((table: string) => {
+        return createQueryChain(table);
+      }),
+    },
+    initializePool: jest.fn().mockImplementation(() => {
       return {
-        select: function () { return this; },
-        eq:     function () { return this; },
-        in:     function () { return this; },
-        single: function () { return p; },
-        then:   p.then.bind(p),
-        catch:  p.catch.bind(p),
-        finally: p.finally.bind(p),
+        query: jest.fn().mockImplementation(async (...args: any[]) => {
+          const res = await globalThis.__isolationCatPoolMock.query(...args);
+          if (res && typeof res === "object" && "rows" in res) {
+            return [res.rows];
+          }
+          if (Array.isArray(res)) {
+            return res;
+          }
+          return [[]];
+        })
       };
     }),
-  },
-}));
+  };
+});
 
 // Mock pg.Pool — used by CategoryController (categoryPool)
 jest.mock("pg", () => {
@@ -438,7 +551,6 @@ describe("Category getList — SubAdmin isolation (paginated, page=1&limit=10)",
   it("45: unauthenticated paginated request returns all categories with correct total", async () => {
     asUnauthenticated();
     catPool().query
-      .mockResolvedValueOnce({ rows: [{ count: "3" }] })
       .mockResolvedValueOnce({ rows: [globalCat, catA, catB] });
 
     const res = await request(catApp).get("/api/categories/getList?page=1&limit=10");
@@ -454,7 +566,6 @@ describe("Category getList — SubAdmin isolation (paginated, page=1&limit=10)",
     queueSubAdminAStores();
     // COUNT and DATA are already scoped by SQL WHERE in controller
     catPool().query
-      .mockResolvedValueOnce({ rows: [{ count: "2" }] })
       .mockResolvedValueOnce({ rows: [globalCat, catA] });
 
     const res = await request(catApp).get("/api/categories/getList?page=1&limit=10");
@@ -471,7 +582,6 @@ describe("Category getList — SubAdmin isolation (paginated, page=1&limit=10)",
   it("47: Admin paginated — no scoping; all categories returned", async () => {
     asAdmin();
     catPool().query
-      .mockResolvedValueOnce({ rows: [{ count: "3" }] })
       .mockResolvedValueOnce({ rows: [globalCat, catA, catB] });
 
     const res = await request(catApp).get("/api/categories/getList?page=1&limit=10");
@@ -486,7 +596,6 @@ describe("Category getList — SubAdmin isolation (paginated, page=1&limit=10)",
     asSubAdminA();
     queueSubAdminNoStores();
     catPool().query
-      .mockResolvedValueOnce({ rows: [{ count: "1" }] })
       .mockResolvedValueOnce({ rows: [globalCat] });
 
     const res = await request(catApp).get("/api/categories/getList?page=1&limit=10");
@@ -621,7 +730,6 @@ describe("Subcategory getList — SubAdmin isolation (paginated, page=1&limit=10
     queueSubAdminAStores();
     dbPoolMock()
       .mockResolvedValueOnce({ rows: [{ id: GLOBAL_CAT_ID }, { id: CAT_A_ID }] }) // catQuery (allowed IDs)
-      .mockResolvedValueOnce({ rows: [{ total: 2 }] })                             // COUNT
       .mockResolvedValueOnce({ rows: [subGlobal, subA] });                         // DATA
 
     const res = await request(subApp).get("/api/subcategories/getList?page=1&limit=10");
@@ -638,7 +746,6 @@ describe("Subcategory getList — SubAdmin isolation (paginated, page=1&limit=10
   it("56: Unauthenticated paginated — all subcategories returned, no scoping applied", async () => {
     asUnauthenticated();
     dbPoolMock()
-      .mockResolvedValueOnce({ rows: [{ total: 3 }] })
       .mockResolvedValueOnce({ rows: [subGlobal, subA, subB] });
 
     const res = await request(subApp).get("/api/subcategories/getList?page=1&limit=10");
@@ -652,7 +759,6 @@ describe("Subcategory getList — SubAdmin isolation (paginated, page=1&limit=10
   it("57: Admin paginated — all subcategories returned, correct total", async () => {
     asAdmin();
     dbPoolMock()
-      .mockResolvedValueOnce({ rows: [{ total: 3 }] })
       .mockResolvedValueOnce({ rows: [subGlobal, subA, subB] });
 
     const res = await request(subApp).get("/api/subcategories/getList?page=1&limit=10");
@@ -706,7 +812,6 @@ describe("Category getList — StoreAdmin inherits governing SubAdmin scope", ()
     asStoreAdminA();
     queueSubAdminAStores();
     catPool().query
-      .mockResolvedValueOnce({ rows: [{ count: "2" }] })
       .mockResolvedValueOnce({ rows: [globalCat, catA] });
 
     const res = await request(catApp).get("/api/categories/getList?page=1&limit=10");

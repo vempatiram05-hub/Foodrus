@@ -62,6 +62,20 @@ jest.mock("../config/DBConnect", () => {
       from: jest.fn(() => chain),
       rpc: jest.fn(),
     },
+    initializePool: jest.fn().mockImplementation(() => {
+      return {
+        query: jest.fn().mockImplementation(async (...args: any[]) => {
+          const res = await globalThis.__catRoutePoolMock.query(...args);
+          if (res && typeof res === "object" && "rows" in res) {
+            return [res.rows];
+          }
+          if (Array.isArray(res)) {
+            return res;
+          }
+          return [[]];
+        })
+      };
+    }),
   };
 });
 
@@ -172,6 +186,19 @@ describe("Category Routes", () => {
     expect(res.body.success).toBe(true);
   });
 
+  it("POST /api/categories/CreateCategory → 409 conflict when case-insensitive name exists", async () => {
+    catPool().query
+      .mockResolvedValueOnce({ rows: [{ name: "electronics" }] }); // dup check: found category with lower-cased name
+
+    const res = await request(app)
+      .post("/api/categories/CreateCategory")
+      .send({ name: "Electronics", store_id: validStoreId });
+
+    expect(res.status).toBe(409);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/Category name already exists/i);
+  });
+
   /* ================= GET LIST ================= */
   it("GET /api/categories/getList → success", async () => {
     catPool().query.mockResolvedValueOnce({ rows: [mockCategory] }); // SELECT * FROM categories
@@ -193,6 +220,30 @@ describe("Category Routes", () => {
     expect(res.body.success).toBe(true);
   });
 
+  /* ================= GET BY STORE ID ================= */
+  it("GET /api/categories/getCategoryByStoreId/:store_id → success", async () => {
+    catPool().query
+      .mockResolvedValueOnce({ rows: [{ id: validStoreId }] }) // check store exists
+      .mockResolvedValueOnce({ rows: [{ category_id: mockCategory.id }] }) // get products category_ids
+      .mockResolvedValueOnce({ rows: [mockCategory] }); // get categories
+
+    const res = await request(app).get(`/api/categories/getCategoryByStoreId/${validStoreId}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data[0].id).toBe(mockCategory.id);
+  });
+
+  it("GET /api/categories/getCategoryByStoreId/:store_id → 404 store not found", async () => {
+    catPool().query.mockResolvedValueOnce({ rows: [] }); // check store exists: not found
+
+    const res = await request(app).get(`/api/categories/getCategoryByStoreId/non-existent-store`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/Store not found/i);
+  });
+
   /* ================= UPDATE ================= */
   it("PUT /api/categories/UpdateCategory/:id → success", async () => {
     catPool().query
@@ -206,6 +257,20 @@ describe("Category Routes", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+  });
+
+  it("PUT /api/categories/UpdateCategory/:id → 409 conflict when case-insensitive name exists on another category", async () => {
+    catPool().query
+      .mockResolvedValueOnce({ rows: [mockCategory] })                               // GET existing
+      .mockResolvedValueOnce({ rows: [{ id: "some-other-id", name: "fashion" }] }); // dup check: found other category with name
+
+    const res = await request(app)
+      .put(`/api/categories/UpdateCategory/${mockCategory.id}`)
+      .send({ name: "Fashion", store_id: validStoreId });
+
+    expect(res.status).toBe(409);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/already exists/i);
   });
 
   /* ================= DELETE ================= */

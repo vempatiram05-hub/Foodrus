@@ -131,16 +131,42 @@ export class SubcategoryController {
 
       let allowedCategoryIds: string[] | null = null;
       const userPayload = (req as any).user as any;
-      if (userPayload?.role_name === "SubAdmin") {
+      const callerRole: string | undefined = userPayload?.role_name;
+      const isScopedRole = callerRole === "SubAdmin" || callerRole === "StoreAdmin" || callerRole === "Employee";
+
+      let governingSubAdminId: string | null = null;
+      if (userPayload) {
+        if (callerRole === "SubAdmin") {
+          governingSubAdminId = userPayload.id;
+        } else if (callerRole === "StoreAdmin") {
+          governingSubAdminId = userPayload.sub_admin_id ?? null;
+        } else if (callerRole === "Employee") {
+          governingSubAdminId = userPayload.sub_admin_id ?? null;
+          if (!governingSubAdminId && userPayload.store_admin_id) {
+            const { data: saUser } = await DBconnection
+              .from("users").select("sub_admin_id").eq("id", userPayload.store_admin_id).single();
+            governingSubAdminId = (saUser as any)?.sub_admin_id ?? null;
+          }
+        }
+      }
+
+      if (isScopedRole && !governingSubAdminId) {
+        const empty = { success: true, message: "No records found", data: [], total: 0 };
+        return isPaginated
+          ? res.json({ ...empty, page: getQueryNumber(req.query, "page", 1), limit: getQueryNumber(req.query, "limit", 10) })
+          : res.json(empty);
+      }
+
+      if (governingSubAdminId) {
         const { data: hierarchyUsers } = await DBconnection
-          .from("users").select("id").eq("sub_admin_id", userPayload.id);
+          .from("users").select("id").eq("sub_admin_id", governingSubAdminId);
         const hierarchyIds = (hierarchyUsers ?? []).map((u: any) => u.id);
 
         const { data: adminUsers } = await DBconnection
           .from("users").select("id").in("role_name", ["Admin", "SuperAdmin"]);
         const adminIds = (adminUsers ?? []).map((u: any) => u.id);
 
-        const allowedCreatorIds = [userPayload.id, ...hierarchyIds, ...adminIds];
+        const allowedCreatorIds = [governingSubAdminId, ...hierarchyIds, ...adminIds];
 
         const { data: cats } = await (DBconnection.from("categories") as any)
           .select("id").in("created_by", allowedCreatorIds);

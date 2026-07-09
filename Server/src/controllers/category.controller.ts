@@ -5,7 +5,7 @@ import fs from "node:fs";
 import { generateImageName } from "../utils/file.util";
 import { generateLocalSignedUrl } from "../utils/localSignedUrl";
 import { getQueryNumber, getQueryString } from "../utils/queryParser";
-import { DBconnection } from "../config/DBConnect";
+import { DBconnection, initializePool } from "../config/DBConnect";
 import { logger } from "../utils/logger";
 
 const UPLOAD_DIR = path.join(process.cwd(), "src/uploads/categories");
@@ -83,7 +83,7 @@ async function getCatCols(): Promise<string> {
 // and computing is_global as a fallback when the DB column doesn't exist yet.
 interface AdminIdCache { ids: Set<string>; fetchedAt: number }
 let _adminIdCache: AdminIdCache | null = null;
-const ADMIN_CACHE_TTL_MS = 5 * 60 * 1000;
+const ADMIN_CACHE_TTL_MS = process.env.NODE_ENV === "test" ? 0 : 5 * 60 * 1000;
 
 async function getAdminIdSet(): Promise<Set<string>> {
   const now = Date.now();
@@ -148,12 +148,20 @@ export class CategoryController {
       const CAT_COLS = await getCatCols();
       const hasIsGlobalCol = await detectIsGlobalCol();
 
-      // ── 1. Check if a category with this name already exists (case-sensitive) ──
-      const { data: existing } = await (DBconnection.from("categories") as any)
-        .select(CAT_COLS).eq("name", normalized).limit(1).maybeSingle();
+      // ── 1. Check if a category with this name already exists (case-insensitive) ──
+      const pool = initializePool();
+      const [rows] = await pool.query(
+        `
+        SELECT id
+        FROM categories
+        WHERE LOWER(name) = LOWER(?)
+        LIMIT 1
+        `,
+        [name.trim()]
+      );
 
-      if (existing && existing.name === normalized) {
-        return res.status(409).json({ success: false, message: "Category name already exists" });
+      if ((rows as any[]).length > 0) {
+        throw new Error("Category name already exists");
       }
 
       // ── 2. Create new category ────────────────────────────────────────────────
@@ -193,7 +201,8 @@ export class CategoryController {
       if (images && images.length) {
         images.forEach((img: string) => deleteFile(img));
       }
-      return res.status(400).json({ success: false, message: err.message });
+      const statusCode = err.message === "Category name already exists" ? 409 : 400;
+      return res.status(statusCode).json({ success: false, message: err.message });
     }
   }
 
@@ -334,6 +343,71 @@ export class CategoryController {
     }
   }
 
+  static async getByStoreId(req: Request, res: Response) {
+    try {
+      const storeId = req.params.store_id as string;
+      if (!storeId) {
+        return res.status(400).json({ success: false, message: "Store ID is required" });
+      }
+
+      // ── 1. Check if store exists ──
+      const { data: store, error: storeErr } = await DBconnection
+        .from("stores").select("id").eq("id", storeId).maybeSingle();
+      if (storeErr) throw storeErr;
+      if (!store) {
+        return res.status(404).json({ success: false, message: "Store not found" });
+      }
+
+      // ── 2. Get distinct category_id values from products of this store ──
+      const { data: products, error: prodErr } = await DBconnection
+        .from("products").select("category_id").eq("store_id", storeId);
+      if (prodErr) throw prodErr;
+
+      const categoryIds = Array.from(
+        new Set(
+          (products ?? [])
+            .map((p: any) => p.category_id)
+            .filter(Boolean)
+        )
+      );
+
+      if (categoryIds.length === 0) {
+        return res.json({
+          success: true,
+          message: "Categories fetched successfully",
+          data: []
+        });
+      }
+
+      // ── 3. Get category details ──
+      const CAT_COLS = await getCatCols();
+      const hasIsGlobalCol = await detectIsGlobalCol();
+      const adminIdSet = hasIsGlobalCol ? null : await getAdminIdSet();
+
+      const { data: categories, error: catErr } = await DBconnection
+        .from("categories")
+        .select(CAT_COLS)
+        .in("id", categoryIds);
+      if (catErr) throw catErr;
+
+      const mapped = (categories ?? []).map((c: any) => ({
+        ...c,
+        images: mapImages(c.images),
+        is_global: hasIsGlobalCol
+          ? Boolean(c.is_global)
+          : (c.created_by != null && adminIdSet!.has(c.created_by)),
+      }));
+
+      return res.json({
+        success: true,
+        message: "Categories fetched successfully",
+        data: mapped
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: err?.message || "Failed to fetch categories" });
+    }
+  }
+
   static async update(req: any, res: Response) {
     let savedNewImages: string[] | undefined;
     try {
@@ -359,11 +433,18 @@ export class CategoryController {
       let normalizedName = existing.name;
       if (name) {
         normalizedName = normalizeName(name);
-        const { data: dup } = await DBconnection
-          .from("categories").select("id, name")
-          .eq("name", normalizedName).neq("id", req.params.id).maybeSingle();
-        if (dup && dup.name === normalizedName) {
-          return res.status(409).json({ success: false, message: "A category with this name already exists" });
+        const pool = initializePool();
+        const [rows] = await pool.query(
+          `
+          SELECT id
+          FROM categories
+          WHERE LOWER(name) = LOWER(?) AND id != ?
+          LIMIT 1
+          `,
+          [normalizedName, req.params.id]
+        );
+        if ((rows as any[]).length > 0) {
+          throw new Error("A category with this name already exists");
         }
       }
 
@@ -411,7 +492,8 @@ export class CategoryController {
       if (savedNewImages && savedNewImages.length) {
         savedNewImages.forEach((img: string) => deleteFile(img));
       }
-      return res.status(400).json({ success: false, message: err.message });
+      const statusCode = err.message === "A category with this name already exists" ? 409 : 400;
+      return res.status(statusCode).json({ success: false, message: err.message });
     }
   }
 

@@ -10,6 +10,8 @@ declare global {
   var __staCatPoolMock: { query: jest.Mock; end: jest.Mock };
 }
 
+import "pg";
+
 /* ================= MOCKS (hoisted before all imports) ================= */
 
 // pg mock for CategoryController (uses direct SQL, bypasses PostgREST)
@@ -22,23 +24,69 @@ jest.mock("pg", () => {
   return { Pool: jest.fn().mockImplementation(() => pool) };
 });
 
-jest.mock("../config/DBConnect", () => ({
-  DBconnection: {
-    from: jest.fn(() => ({
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      neq: jest.fn().mockReturnThis(),
-      in: jest.fn().mockReturnThis(),
-      is: jest.fn().mockReturnThis(),
-      ilike: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      range: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
-      single: jest.fn().mockResolvedValue({ data: null, error: null }),
-    })),
-  },
-}));
+jest.mock("../config/DBConnect", () => {
+  let selectedFields = "";
+  
+  const queryExecutor = async (isSingle: boolean) => {
+    try {
+      if (selectedFields === "is_global" || selectedFields === "created_by" || selectedFields === "store_id") {
+        return { data: [], error: null };
+      }
+      const res = await globalThis.__staCatPoolMock.query();
+      const rows = res?.rows ?? [];
+      if (isSingle) {
+        return { data: rows[0] ?? null, error: null };
+      }
+      return { data: rows, error: null };
+    } catch (err: any) {
+      return { data: null, error: err };
+    }
+  };
+
+  const chain: any = {
+    select: jest.fn().mockImplementation((fields) => {
+      selectedFields = typeof fields === "string" ? fields : "";
+      return chain;
+    }),
+    eq:     jest.fn().mockReturnThis(),
+    neq:    jest.fn().mockReturnThis(),
+    in:     jest.fn().mockReturnThis(),
+    is:     jest.fn().mockReturnThis(),
+    or:     jest.fn().mockReturnThis(),
+    ilike:  jest.fn().mockReturnThis(),
+    order:  jest.fn().mockReturnThis(),
+    limit:  jest.fn().mockReturnThis(),
+    range:  jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    delete: jest.fn().mockReturnThis(),
+    single: jest.fn().mockImplementation(() => queryExecutor(true)),
+    maybeSingle: jest.fn().mockImplementation(() => queryExecutor(true)),
+    then: jest.fn().mockImplementation((resolve) => {
+      queryExecutor(false).then(resolve);
+    }),
+  };
+
+  return {
+    DBconnection: {
+      from: jest.fn(() => chain),
+    },
+    initializePool: jest.fn().mockImplementation(() => {
+      return {
+        query: jest.fn().mockImplementation(async (...args: any[]) => {
+          const res = await globalThis.__staCatPoolMock.query(...args);
+          if (res && typeof res === "object" && "rows" in res) {
+            return [res.rows];
+          }
+          if (Array.isArray(res)) {
+            return res;
+          }
+          return [[]];
+        })
+      };
+    }),
+  };
+});
 
 jest.mock("../services/unique.service");
 
@@ -195,23 +243,53 @@ const APPROVED_PRODUCT_GROC = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  catPool().query.mockReset();
 
-  // Restore pg pool default after clearAllMocks clears the once-queue
+  // Restore pg pool default
   catPool().query.mockResolvedValue({ rows: [] });
 
-  (DBconnection.from as jest.Mock).mockImplementation(() => ({
-    select: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    neq: jest.fn().mockReturnThis(),
-    in: jest.fn().mockReturnThis(),
-    is: jest.fn().mockReturnThis(),
-    ilike: jest.fn().mockReturnThis(),
-    order: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockReturnThis(),
-    range: jest.fn().mockReturnThis(),
-    maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
-    single: jest.fn().mockResolvedValue({ data: null, error: null }),
-  }));
+  let selectedFields = "";
+  const queryExecutor = async (isSingle: boolean) => {
+    try {
+      if (selectedFields === "is_global" || selectedFields === "created_by" || selectedFields === "store_id") {
+        return { data: [], error: null };
+      }
+      const res = await globalThis.__staCatPoolMock.query();
+      const rows = res?.rows ?? [];
+      if (isSingle) {
+        return { data: rows[0] ?? null, error: null };
+      }
+      return { data: rows, error: null };
+    } catch (err: any) {
+      return { data: null, error: err };
+    }
+  };
+
+  const chain: any = {
+    select: jest.fn().mockImplementation((fields) => {
+      selectedFields = typeof fields === "string" ? fields : "";
+      return chain;
+    }),
+    eq:     jest.fn().mockReturnThis(),
+    neq:    jest.fn().mockReturnThis(),
+    in:     jest.fn().mockReturnThis(),
+    is:     jest.fn().mockReturnThis(),
+    or:     jest.fn().mockReturnThis(),
+    ilike:  jest.fn().mockReturnThis(),
+    order:  jest.fn().mockReturnThis(),
+    limit:  jest.fn().mockReturnThis(),
+    range:  jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    delete: jest.fn().mockReturnThis(),
+    single: jest.fn().mockImplementation(() => queryExecutor(true)),
+    maybeSingle: jest.fn().mockImplementation(() => queryExecutor(true)),
+    then: jest.fn().mockImplementation((resolve) => {
+      queryExecutor(false).then(resolve);
+    }),
+  };
+
+  (DBconnection.from as jest.Mock).mockImplementation(() => chain);
 });
 
 describe("Store-Type-Aware Product & Category Management", () => {
@@ -359,16 +437,12 @@ describe("Store-Type-Aware Product & Category Management", () => {
   it("rejects product creation with brand_id on a restaurant store (400)", async () => {
     /*
      * Controller call order:
-     *   (1) DBconnection: duplicate name check  → limit → no dup
-     *   (2) dbPool.query: category existence check → found
-     *   (3) DBconnection: store type lookup → maybeSingle → restaurant
+     *   (1) category existence check → found
+     *   (2) store type lookup → restaurant
      */
-    (DBconnection.from as jest.Mock)
-      .mockReturnValueOnce(makeChain({ data: [], error: null }, "limit"))
-      .mockReturnValueOnce(makeChain({ data: RESTAURANT_STORE, error: null }, "maybeSingle"));
-
     catPool().query
-      .mockResolvedValueOnce({ rows: [{ id: CATEGORY_ID_A }], rowCount: 1 }); // category check → found
+      .mockResolvedValueOnce({ rows: [{ id: CATEGORY_ID_A }], rowCount: 1 }) // category check → found
+      .mockResolvedValueOnce({ rows: [RESTAURANT_STORE], rowCount: 1 }); // store check
 
     const res = await request(app)
       .post("/api/products/CreateProduct")
@@ -387,12 +461,9 @@ describe("Store-Type-Aware Product & Category Management", () => {
 
   /* ─── 10. Product create — grocery + brand_id → succeeds ────────────────── */
   it("allows product creation with brand_id on a grocery store (201)", async () => {
-    (DBconnection.from as jest.Mock)
-      .mockReturnValueOnce(makeChain({ data: [], error: null }, "limit"))
-      .mockReturnValueOnce(makeChain({ data: GROCERY_STORE, error: null }, "maybeSingle"));
-
     catPool().query
-      .mockResolvedValueOnce({ rows: [{ id: CATEGORY_ID_B }], rowCount: 1 }); // category check → found
+      .mockResolvedValueOnce({ rows: [{ id: CATEGORY_ID_B }], rowCount: 1 }) // category check → found
+      .mockResolvedValueOnce({ rows: [GROCERY_STORE], rowCount: 1 }); // store check
 
     mockService.create.mockResolvedValue({ id: PRODUCT_ID_GROC, name: "amul butter 100g" } as any);
     mockService.updateById.mockResolvedValue({ id: PRODUCT_ID_GROC, name: "amul butter 100g", images: [] } as any);
@@ -419,8 +490,8 @@ describe("Store-Type-Aware Product & Category Management", () => {
      */
     mockService.getDataById.mockResolvedValue(APPROVED_PRODUCT_REST as any);
 
-    (DBconnection.from as jest.Mock)
-      .mockReturnValueOnce(makeChain({ data: RESTAURANT_STORE, error: null }, "maybeSingle"));
+    catPool().query
+      .mockResolvedValueOnce({ rows: [RESTAURANT_STORE], rowCount: 1 }); // store check
 
     const res = await request(app)
       .put(`/api/products/UpdateProductById/${PRODUCT_ID_REST}`)
@@ -464,10 +535,6 @@ describe("Store-Type-Aware Product & Category Management", () => {
   /* ─── 12. Product create — unknown category_id rejected ─────────────────── */
   it("rejects product creation when category_id does not exist (400)", async () => {
     const GHOST_CAT = "550e8400-e29b-41d4-a716-000000000099";
-
-    // Duplicate name check — no conflict
-    (DBconnection.from as jest.Mock)
-      .mockReturnValueOnce(makeChain({ data: [], error: null }, "limit"));
 
     // Category check uses dbPool.query; default catPool mock returns { rows: [] } → not found
 
@@ -575,8 +642,8 @@ describe("Store-Type-Aware Product & Category Management", () => {
     expect(res.body.data).not.toHaveProperty("store_id");
   });
 
-  /* ─── 18. Duplicate category name — returned as already_global (200) ────── */
-  it("returns existing category when name already exists (200 already_global: true)", async () => {
+  /* ─── 18. Duplicate category name — returned as 409 ────── */
+  it("returns 409 conflict when category name already exists", async () => {
     catPool().query
       .mockResolvedValueOnce({ rows: [{ id: "550e8400-e29b-41d4-a716-000000000060" }] });  // existing name check → found
 
@@ -584,9 +651,9 @@ describe("Store-Type-Aware Product & Category Management", () => {
       .post("/api/categories/CreateCategory")
       .send({ name: "Beverages" });
 
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.already_global).toBe(true);
+    expect(res.status).toBe(409);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/already exists/i);
   });
 
   /* ─── 19. Any authenticated role can create a category ──────────────────── */
@@ -606,15 +673,9 @@ describe("Store-Type-Aware Product & Category Management", () => {
       CategoryController.create,
     );
 
-    (DBconnection.from as jest.Mock).mockImplementation(() => ({
-      select: jest.fn().mockReturnThis(),
-      eq:     jest.fn().mockReturnThis(),
-      ilike:  jest.fn().mockReturnThis(),
-      limit:  jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),       // no existing name
-      single:      jest.fn().mockResolvedValue({ data: { id: "550e8400-e29b-41d4-a716-000000000099", name: "global attempt", type: "food", images: [] }, error: null }),
-    }));
+    catPool().query
+      .mockResolvedValueOnce({ rows: [] }) // duplicate check → not found
+      .mockResolvedValueOnce({ rows: [{ id: "550e8400-e29b-41d4-a716-000000000099", name: "global attempt", type: "food", images: [] }] }); // insert
 
     const res = await request(saApp)
       .post("/api/categories/CreateCategory")

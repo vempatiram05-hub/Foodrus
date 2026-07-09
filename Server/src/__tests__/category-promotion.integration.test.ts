@@ -73,6 +73,15 @@ jest.mock("../config/DBConnect", () => ({
       return chain;
     }),
   },
+  initializePool: jest.fn().mockImplementation(() => {
+    return {
+      query: jest.fn().mockImplementation(async () => {
+        const queued = (globalThis.__promoDbQueue ?? []).shift();
+        const data = queued?.data ? (Array.isArray(queued.data) ? queued.data : [queued.data]) : [];
+        return [data];
+      })
+    };
+  }),
 }));
 
 jest.mock("../services/unique.service");

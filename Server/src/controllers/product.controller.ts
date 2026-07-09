@@ -251,16 +251,22 @@ export class ProductController {
         }
       }
 
-      // ── 3. Resolve category IDs for type filter (food / grocery / bakery) ──
-      //   Filters products by their category's type rather than store type,
-      //   since stores may not be typed as grocery even when selling grocery items.
-      let typeCategoryIds: Set<string> | null = null;
+      // ── 3. Resolve store IDs for type filter (food / grocery / bakery) ──
+      let typeStoreIds: string[] | null = null;
       if (["food", "grocery", "bakery"].includes(type)) {
-        const { data: catsByType } = await DBconnection
-          .from("categories")
+        let storeType = type;
+        if (type === "food") storeType = "restaurant";
+        const { data: storesByType } = await DBconnection
+          .from("stores")
           .select("id")
-          .eq("type", type);
-        typeCategoryIds = new Set((catsByType || []).map((c: any) => c.id));
+          .eq("type", storeType);
+        typeStoreIds = (storesByType || []).map((s: any) => s.id);
+
+        if (finalStoreIds !== null) {
+          finalStoreIds = finalStoreIds.filter(id => typeStoreIds!.includes(id));
+        } else {
+          finalStoreIds = typeStoreIds;
+        }
       }
 
       // ── 4. Early-exit if role scoping results in an empty allowed store set ─
@@ -277,11 +283,6 @@ export class ProductController {
 
       // ── 5. Fetch all products from DB ─────────────────────────────────────
       let allData = await uniqueService.getAllData(TABLE_NAME);
-
-      // Apply type filter using category type
-      if (typeCategoryIds !== null) {
-        allData = allData.filter((p: any) => typeCategoryIds!.has(p.category_id));
-      }
 
       // Apply search filter
       if (search) {

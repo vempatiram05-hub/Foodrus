@@ -69,6 +69,20 @@ jest.mock("../config/DBConnect", () => {
       from: jest.fn(() => chain),
       rpc: jest.fn(),
     },
+    initializePool: jest.fn().mockImplementation(() => {
+      return {
+        query: jest.fn().mockImplementation(async (...args: any[]) => {
+          const res = await globalThis.__categoryPoolMock.query(...args);
+          if (res && typeof res === "object" && "rows" in res) {
+            return [res.rows];
+          }
+          if (Array.isArray(res)) {
+            return res;
+          }
+          return [[]];
+        })
+      };
+    }),
   };
 });
 
