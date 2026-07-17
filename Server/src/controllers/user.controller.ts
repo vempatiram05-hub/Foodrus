@@ -473,7 +473,7 @@ export const register = async (req: Request, res: Response) => {
     user.role_name = role_name;
 
     /* ================= IMAGE UPLOAD ================= */
-    if (req.files?.length) {
+    if (Array.isArray(req.files) && req.files.length) {
       const images = saveFiles(req.files, user.full_name);
       await uniqueService.updateById(TABLE, user.id, { images });
       user.images = images;

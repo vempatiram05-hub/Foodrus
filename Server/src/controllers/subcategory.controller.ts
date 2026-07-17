@@ -150,27 +150,53 @@ export class SubcategoryController {
         }
       }
 
-      if (isScopedRole && !governingSubAdminId) {
-        const empty = { success: true, message: "No records found", data: [], total: 0 };
-        return isPaginated
-          ? res.json({ ...empty, page: getQueryNumber(req.query, "page", 1), limit: getQueryNumber(req.query, "limit", 10) })
-          : res.json(empty);
-      }
+      if (isScopedRole) {
+        if (governingSubAdminId) {
+          const { data: hierarchyUsers } = await DBconnection
+            .from("users").select("id").eq("sub_admin_id", governingSubAdminId);
+          const hierarchyIds = (hierarchyUsers ?? []).map((u: any) => u.id);
 
-      if (governingSubAdminId) {
-        const { data: hierarchyUsers } = await DBconnection
-          .from("users").select("id").eq("sub_admin_id", governingSubAdminId);
-        const hierarchyIds = (hierarchyUsers ?? []).map((u: any) => u.id);
+          const { data: adminUsers } = await DBconnection
+            .from("users").select("id").in("role_name", ["Admin", "SuperAdmin"]);
+          const adminIds = (adminUsers ?? []).map((u: any) => u.id);
 
-        const { data: adminUsers } = await DBconnection
-          .from("users").select("id").in("role_name", ["Admin", "SuperAdmin"]);
-        const adminIds = (adminUsers ?? []).map((u: any) => u.id);
+          const allowedCreatorIds = [governingSubAdminId, ...hierarchyIds, ...adminIds];
 
-        const allowedCreatorIds = [governingSubAdminId, ...hierarchyIds, ...adminIds];
+          let categoriesQuery = (DBconnection.from("categories") as any).select("id");
+          let hasIsGlobal = false;
+          try {
+            const { error } = await (DBconnection.from("categories") as any).select("is_global").limit(1);
+            hasIsGlobal = !error || !error.message.includes("is_global");
+          } catch (err) {}
 
-        const { data: cats } = await (DBconnection.from("categories") as any)
-          .select("id").in("created_by", allowedCreatorIds);
-        allowedCategoryIds = (cats ?? []).map((c: any) => c.id);
+          if (hasIsGlobal) {
+            categoriesQuery = categoriesQuery.or(`created_by.in.(${allowedCreatorIds.join(",")}),is_global.eq.true`);
+          } else {
+            categoriesQuery = categoriesQuery.in("created_by", allowedCreatorIds);
+          }
+
+          const { data: cats } = await categoriesQuery;
+          allowedCategoryIds = (cats ?? []).map((c: any) => c.id);
+        } else {
+          let categoriesQuery = (DBconnection.from("categories") as any).select("id");
+          let hasIsGlobal = false;
+          try {
+            const { error } = await (DBconnection.from("categories") as any).select("is_global").limit(1);
+            hasIsGlobal = !error || !error.message.includes("is_global");
+          } catch (err) {}
+
+          if (hasIsGlobal) {
+            categoriesQuery = categoriesQuery.eq("is_global", true);
+          } else {
+            const { data: adminUsers } = await DBconnection
+              .from("users").select("id").in("role_name", ["Admin", "SuperAdmin"]);
+            const adminIds = (adminUsers ?? []).map((u: any) => u.id);
+            categoriesQuery = categoriesQuery.in("created_by", adminIds);
+          }
+
+          const { data: cats } = await categoriesQuery;
+          allowedCategoryIds = (cats ?? []).map((c: any) => c.id);
+        }
       }
 
       const { data: allRows, error } = await DBconnection

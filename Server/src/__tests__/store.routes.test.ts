@@ -25,6 +25,10 @@ jest.mock("../middleware/auth", () => ({
     req.user = { id: "550e8400-e29b-41d4-a716-446655440000", role_name: "SubAdmin" };
     next();
   },
+  optionalAuthMiddlewares: (req: any, res: any, next: any) => {
+    req.user = { id: "550e8400-e29b-41d4-a716-446655440000", role_name: "SubAdmin" };
+    next();
+  },
   requireRole: (...roles: string[]) => (req: any, res: any, next: any) => next(),
   requirePermission: (module: string, action: string) => (req: any, res: any, next: any) => next(),
 }));

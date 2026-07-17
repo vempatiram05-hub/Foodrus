@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
-
+import { BASE_URL } from '../config/apiConfig';
 
 import {
   View,
@@ -127,6 +127,98 @@ const GROCERIES: Grocery[] = [
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation(); // ← add this line
 
+  const [dynamicCategories, setDynamicCategories] = useState<any[]>([]);
+  const [dynamicStores, setDynamicStores] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchCategories();
+    fetchStores();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/categories/getList`);
+      const json = await response.json();
+      if (json.success && Array.isArray(json.data)) {
+        setDynamicCategories(json.data);
+      }
+    } catch (error) {
+      console.log('Error fetching categories:', error);
+    }
+  };
+
+  const fetchStores = async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/stores/getList`);
+      const json = await response.json();
+      if (json.success && Array.isArray(json.data)) {
+        setDynamicStores(json.data);
+      }
+    } catch (error) {
+      console.log('Error fetching stores:', error);
+    }
+  };
+
+  const getCategoryImageUrl = (cat: any) => {
+    if (cat.images && cat.images.length > 0) {
+      const path = cat.images[0];
+      if (path.startsWith('http')) return { uri: path };
+      return { uri: BASE_URL.replace('/api', '') + path };
+    }
+    const name = (cat.name || '').toLowerCase();
+    if (name.includes('cake')) return require('../assets/images/logo/cake.png');
+    if (name.includes('biryani')) return require('../assets/images/logo/biryani.png');
+    if (name.includes('omelette') || name.includes('omlette')) return require('../assets/images/logo/omlette.png');
+    if (name.includes('shakes')) return require('../assets/images/logo/shakes.png');
+    if (name.includes('chinese')) return require('../assets/images/logo/chinese.png');
+    if (name.includes('burger')) return require('../assets/images/logo/burger.png');
+    return require('../assets/images/logo/logo.png');
+  };
+
+  const handleCategoryPress = (cat: any) => {
+    if (cat.screen) {
+      navigation.navigate(cat.screen as never);
+      return;
+    }
+    const name = (cat.name || '').toLowerCase();
+    if (name.includes('cake')) {
+      navigation.navigate('Cake' as never);
+    } else if (name.includes('biryani')) {
+      navigation.navigate('Biryani' as never);
+    } else if (name.includes('omelette') || name.includes('omlette')) {
+      navigation.navigate('Omelette' as never);
+    } else if (name.includes('shakes')) {
+      navigation.navigate('Shakes' as never);
+    } else if (name.includes('chinese')) {
+      navigation.navigate('Chinese' as never);
+    } else if (name.includes('burger')) {
+      navigation.navigate('Burger' as never);
+    } else {
+      navigation.navigate('Categories' as never);
+    }
+  };
+
+  const getStoreImageUrl = (store: any) => {
+    if (store.images && store.images.length > 0) {
+      const path = store.images[0];
+      if (path.startsWith('http')) return { uri: path };
+      return { uri: BASE_URL.replace('/api', '') + path };
+    }
+    return require('../assets/images/logo/biryani.png');
+  };
+
+  const getStoreRating = (store: any) => {
+    return store.rating || '4.5';
+  };
+
+  const getStoreDescription = (store: any) => {
+    return store.description || 'Quality food and groceries delivered to you.';
+  };
+
+  const getStoreDiscount = (store: any) => {
+    return store.discount || '10% OFF Upto ₹100';
+  };
+
 
 
   return (
@@ -215,17 +307,15 @@ const HomeScreen: React.FC = () => {
           showsHorizontalScrollIndicator={false}
           style={styles.categoryScroll}
         >
-          {CATEGORIES.map((cat) => (
+          {(dynamicCategories.length > 0 ? dynamicCategories : CATEGORIES).map((cat) => (
             <TouchableOpacity
               key={cat.id}
               style={styles.categoryItem}
-              onPress={() =>
-                navigation.navigate(cat.screen as never)
-              }
+              onPress={() => handleCategoryPress(cat)}
             >
               <View style={styles.categoryCircle}>
                 <Image
-                  source={cat.image}
+                  source={getCategoryImageUrl(cat)}
                   style={styles.categoryImage}
                   resizeMode="cover"
                 />
@@ -318,7 +408,7 @@ const HomeScreen: React.FC = () => {
 
         {/* ── Popular Restaurants ── */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Popular Restaurants</Text>
+          <Text style={styles.sectionTitle}>Popular Stores</Text>
 
           <TouchableOpacity
             style={styles.viewAllBtn}
@@ -332,24 +422,23 @@ const HomeScreen: React.FC = () => {
           showsHorizontalScrollIndicator={false}
           style={styles.restScroll}
         >
-          {RESTAURANTS.map((r) => (
+          {(dynamicStores.length > 0 ? dynamicStores : RESTAURANTS).map((r) => (
             <TouchableOpacity key={r.id} style={styles.restCard}>
               <View style={styles.restImageContainer}>
-
                 <Image
-                  source={r.image}
+                  source={getStoreImageUrl(r)}
                   style={styles.restImage}
                   resizeMode="cover"
                 />
                 <View style={styles.ratingBadge}>
-                  <Text style={styles.ratingText}>⭐ {r.rating}</Text>
+                  <Text style={styles.ratingText}>⭐ {getStoreRating(r)}</Text>
                 </View>
               </View>
               <Text style={styles.restName}>{r.name}</Text>
-              <Text style={styles.restDesc}>{r.desc}</Text>
+              <Text style={styles.restDesc}>{getStoreDescription(r)}</Text>
               <View style={styles.discountRow}>
                 <Text style={styles.discountIcon}>🏷</Text>
-                <Text style={styles.discountText}>{r.discount}</Text>
+                <Text style={styles.discountText}>{getStoreDiscount(r)}</Text>
               </View>
             </TouchableOpacity>
           ))}

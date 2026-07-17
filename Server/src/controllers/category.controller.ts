@@ -241,13 +241,6 @@ export class CategoryController {
         }
       }
 
-      if (isScopedRole && !governingSubAdminId) {
-        const empty = { success: true, message: "No records found", data: [], total: 0 };
-        return isPaginated
-          ? res.json({ ...empty, page: getQueryNumber(req.query, "page", 1), limit: getQueryNumber(req.query, "limit", 10) })
-          : res.json(empty);
-      }
-
       const CAT_COLS = await getCatCols();
       const hasIsGlobalCol = await detectIsGlobalCol();
       const createdByExists = await detectCreatedByCol();
@@ -256,20 +249,31 @@ export class CategoryController {
         .select(CAT_COLS)
         .order("created_at", { ascending: false });
 
-      if (governingSubAdminId && createdByExists) {
-        const { data: hierarchyUsers } = await DBconnection
-          .from("users").select("id").eq("sub_admin_id", governingSubAdminId);
-        const hierarchyIds = (hierarchyUsers ?? []).map((u: any) => u.id);
-        const allHierarchyIds = [governingSubAdminId, ...hierarchyIds];
+      if (isScopedRole) {
+        if (governingSubAdminId && createdByExists) {
+          const { data: hierarchyUsers } = await DBconnection
+            .from("users").select("id").eq("sub_admin_id", governingSubAdminId);
+          const hierarchyIds = (hierarchyUsers ?? []).map((u: any) => u.id);
+          const allHierarchyIds = [governingSubAdminId, ...hierarchyIds];
 
-        if (hasIsGlobalCol) {
-          // Use stored is_global: include hierarchy-owned OR globally shared categories
-          dbQuery = dbQuery.or(`created_by.in.(${allHierarchyIds.join(",")}),is_global.eq.true`);
+          if (hasIsGlobalCol) {
+            // Use stored is_global: include hierarchy-owned OR globally shared categories
+            dbQuery = dbQuery.or(`created_by.in.(${allHierarchyIds.join(",")}),is_global.eq.true`);
+          } else {
+            // Fallback: include hierarchy-owned + admin-owned (computed from admin ID set)
+            const adminIdSet = await getAdminIdSet();
+            const allowedCreatorIds = [...allHierarchyIds, ...Array.from(adminIdSet)];
+            dbQuery = dbQuery.in("created_by", allowedCreatorIds);
+          }
         } else {
-          // Fallback: include hierarchy-owned + admin-owned (computed from admin ID set)
-          const adminIdSet = await getAdminIdSet();
-          const allowedCreatorIds = [...allHierarchyIds, ...Array.from(adminIdSet)];
-          dbQuery = dbQuery.in("created_by", allowedCreatorIds);
+          // Scoped role but no governing sub-admin hierarchy (e.g. created directly by admin)
+          // Should only see global categories
+          if (hasIsGlobalCol) {
+            dbQuery = dbQuery.eq("is_global", true);
+          } else if (createdByExists) {
+            const adminIdSet = await getAdminIdSet();
+            dbQuery = dbQuery.in("created_by", Array.from(adminIdSet));
+          }
         }
       }
 
@@ -352,7 +356,7 @@ export class CategoryController {
 
       // ── 1. Check if store exists ──
       const { data: store, error: storeErr } = await DBconnection
-        .from("stores").select("id").eq("id", storeId).maybeSingle();
+        .from("stores").select("id, type, store_admin_id").eq("id", storeId).maybeSingle();
       if (storeErr) throw storeErr;
       if (!store) {
         return res.status(404).json({ success: false, message: "Store not found" });
@@ -371,23 +375,53 @@ export class CategoryController {
         )
       );
 
-      if (categoryIds.length === 0) {
-        return res.json({
-          success: true,
-          message: "Categories fetched successfully",
-          data: []
-        });
-      }
-
       // ── 3. Get category details ──
       const CAT_COLS = await getCatCols();
       const hasIsGlobalCol = await detectIsGlobalCol();
       const adminIdSet = hasIsGlobalCol ? null : await getAdminIdSet();
 
-      const { data: categories, error: catErr } = await DBconnection
-        .from("categories")
-        .select(CAT_COLS)
-        .in("id", categoryIds);
+      let categoriesQuery = (DBconnection.from("categories") as any).select(CAT_COLS);
+
+      if (categoryIds.length > 0) {
+        categoriesQuery = categoriesQuery.in("id", categoryIds);
+      } else {
+        // Fallback: Get categories matching store's type and/or hierarchy
+        if (store.type) {
+          categoriesQuery = categoriesQuery.or(`type.eq.${store.type},type.eq.all`);
+        }
+        if (store.store_admin_id) {
+          const { data: storeAdminUser } = await DBconnection
+            .from("users").select("sub_admin_id").eq("id", store.store_admin_id).maybeSingle();
+          const governingSubAdminId = storeAdminUser?.sub_admin_id;
+          if (governingSubAdminId) {
+            const { data: hierarchyUsers } = await DBconnection
+              .from("users").select("id").eq("sub_admin_id", governingSubAdminId);
+            const hierarchyIds = (hierarchyUsers ?? []).map((u: any) => u.id);
+            const allHierarchyIds = [governingSubAdminId, ...hierarchyIds];
+
+            if (hasIsGlobalCol) {
+              categoriesQuery = categoriesQuery.or(`created_by.in.(${allHierarchyIds.join(",")}),is_global.eq.true`);
+            } else {
+              const allowedCreatorIds = [...allHierarchyIds, ...Array.from(adminIdSet!)];
+              categoriesQuery = categoriesQuery.in("created_by", allowedCreatorIds);
+            }
+          } else {
+            if (hasIsGlobalCol) {
+              categoriesQuery = categoriesQuery.eq("is_global", true);
+            } else {
+              categoriesQuery = categoriesQuery.in("created_by", Array.from(adminIdSet!));
+            }
+          }
+        } else {
+          if (hasIsGlobalCol) {
+            categoriesQuery = categoriesQuery.eq("is_global", true);
+          } else {
+            categoriesQuery = categoriesQuery.in("created_by", Array.from(adminIdSet!));
+          }
+        }
+      }
+
+      const { data: categories, error: catErr } = await categoriesQuery;
       if (catErr) throw catErr;
 
       const mapped = (categories ?? []).map((c: any) => ({

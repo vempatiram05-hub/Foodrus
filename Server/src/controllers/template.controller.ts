@@ -171,22 +171,20 @@ export class TemplateController {
         }
       }
 
-      if (isScopedRole && !governingSubAdminId) {
-        const empty = { success: true, message: "No records found", data: [], total: 0 };
-        return isPaginated
-          ? res.json({ ...empty, page: getQueryNumber(req.query, "page", 1), limit: getQueryNumber(req.query, "limit", 10) })
-          : res.json(empty);
-      }
-
       let allowedCreatorIds: string[] | null = null;
-
-      if (governingSubAdminId) {
-        // Single query: fetch hierarchy members + global admins in one round-trip
-        const { data: scopedUsers } = await DBconnection
-          .from("users")
-          .select("id")
-          .or(`sub_admin_id.eq.${governingSubAdminId},role_name.in.(Admin,SuperAdmin)`);
-        allowedCreatorIds = [governingSubAdminId, ...(scopedUsers ?? []).map((u: any) => u.id)];
+      if (isScopedRole) {
+        if (governingSubAdminId) {
+          // Single query: fetch hierarchy members + global admins in one round-trip
+          const { data: scopedUsers } = await DBconnection
+            .from("users")
+            .select("id")
+            .or(`sub_admin_id.eq.${governingSubAdminId},role_name.in.(Admin,SuperAdmin)`);
+          allowedCreatorIds = [governingSubAdminId, ...(scopedUsers ?? []).map((u: any) => u.id)];
+        } else {
+          const { data: adminUsers } = await DBconnection
+            .from("users").select("id").in("role_name", ["Admin", "SuperAdmin"]);
+          allowedCreatorIds = (adminUsers ?? []).map((u: any) => u.id);
+        }
       }
 
       let dbQuery = DBconnection
